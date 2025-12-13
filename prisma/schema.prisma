@@ -1,0 +1,223 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PropertyType {
+  CASA              // House
+  DEPARTAMENTO      // Apartment
+  TERRENO           // Land
+  LOCAL_COMERCIAL   // Commercial Space
+  OFICINA           // Office
+  BODEGA            // Warehouse
+  RANCHO            // Ranch
+}
+
+enum PropertyStatus {
+  VENTA             // For Sale
+  RENTA             // For Rent
+  VENDIDO           // Sold
+  RENTADO           // Rented
+}
+
+enum UserRole {
+  USER
+  AGENT
+  ADMIN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime?
+  name          String?
+  password      String?   // Hashed, nullable for OAuth users
+  phone         String?
+  role          UserRole  @default(USER)
+  image         String?
+  sellerType    String?   // PARTICULAR, INMOBILIARIA, CORREDOR
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // NextAuth Relations
+  accounts      Account[]
+  sessions      Session[]
+
+  // Relations
+  properties    Property[]
+  favorites     Favorite[]
+  savedSearches SavedSearch[]
+  inquiries     Inquiry[]
+
+  @@index([email])
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model Property {
+  id            String          @id @default(cuid())
+  title         String
+  description   String          @db.Text
+
+  // Property Details
+  type          PropertyType
+  status        PropertyStatus
+  price         Decimal         @db.Decimal(12, 2)
+  bedrooms      Int?
+  bathrooms     Decimal?        @db.Decimal(3, 1) // 2.5 bathrooms
+  parkingSpaces Int?
+  areaTotal     Decimal?        @db.Decimal(10, 2) // m²
+  areaCovered   Decimal?        @db.Decimal(10, 2) // m²
+  yearBuilt     Int?
+
+  // Mexican Address
+  street        String
+  exteriorNumber String?
+  interiorNumber String?
+  colonia       String         // Neighborhood
+  municipality  String         // Municipio
+  state         String         // Estado
+  postalCode    String
+  country       String         @default("México")
+
+  // Location
+  latitude      Decimal        @db.Decimal(10, 8)
+  longitude     Decimal        @db.Decimal(11, 8)
+
+  // Features (JSON for flexibility)
+  amenities     Json?          // {pool: true, gym: true, etc}
+
+  // Media
+  images        PropertyImage[]
+  mainImageUrl  String?
+
+  // SEO
+  slug          String         @unique
+
+  // Metadata
+  featured      Boolean        @default(false)
+  active        Boolean        @default(true)
+  views         Int            @default(0)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  publishedAt   DateTime?
+
+  // Relations
+  ownerId       String
+  owner         User           @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  favorites     Favorite[]
+  inquiries     Inquiry[]
+
+  @@index([type, status, state, municipality])
+  @@index([price, bedrooms, bathrooms])
+  @@index([latitude, longitude])
+  @@index([slug])
+  @@index([ownerId])
+  @@index([createdAt])
+}
+
+model PropertyImage {
+  id          String   @id @default(cuid())
+  url         String
+  alt         String?
+  order       Int      @default(0)
+
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@index([propertyId, order])
+}
+
+model Favorite {
+  id          String   @id @default(cuid())
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, propertyId])
+  @@index([userId])
+}
+
+model SavedSearch {
+  id          String   @id @default(cuid())
+  name        String
+
+  // Search Criteria (JSON)
+  criteria    Json     // {type, minPrice, maxPrice, bedrooms, state, etc}
+
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+}
+
+model Inquiry {
+  id          String   @id @default(cuid())
+
+  name        String
+  email       String
+  phone       String?
+  message     String   @db.Text
+
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  status      String   @default("NUEVO") // NUEVO, CONTACTADO, CERRADO
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([propertyId])
+  @@index([userId])
+  @@index([createdAt])
+}

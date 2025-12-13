@@ -1,0 +1,128 @@
+"use client";
+
+import Image from "next/image";
+import { Heart, Bed, Bath, Maximize } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { formatMXN } from "@/lib/utils";
+
+interface PropertyCardCompactProps {
+  id: string;
+  slug: string;
+  title: string;
+  price: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  area?: number;
+  imageUrl: string;
+  address: string;
+  status: string;
+  badge?: string;
+  isHovered?: boolean;
+  onMouseEnter?: () => void;
+  onMouseLeave?: () => void;
+  onClick?: () => void;
+}
+
+export function PropertyCardCompact({
+  id,
+  slug,
+  title,
+  price,
+  bedrooms,
+  bathrooms,
+  area,
+  imageUrl,
+  address,
+  status,
+  badge,
+  isHovered,
+  onMouseEnter,
+  onMouseLeave,
+  onClick,
+}: PropertyCardCompactProps) {
+  return (
+    <div
+      className="block group cursor-pointer"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      onClick={onClick}
+    >
+      <div
+        className={`
+          bg-white rounded-lg overflow-hidden border transition-all duration-200
+          ${isHovered ? "border-blue-500 shadow-lg" : "border-gray-200 hover:shadow-md"}
+        `}
+      >
+        <div className="flex">
+          {/* Image */}
+          <div className="relative w-40 h-32 flex-shrink-0 overflow-hidden bg-gray-100">
+            <Image
+              src={imageUrl}
+              alt={title}
+              fill
+              className="object-cover group-hover:scale-105 transition-transform duration-300"
+            />
+            {badge && (
+              <div className="absolute top-2 left-2">
+                <Badge variant="destructive" className="text-xs font-semibold">
+                  {badge}
+                </Badge>
+              </div>
+            )}
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
+            <div>
+              {/* Price */}
+              <p className="text-lg font-bold text-gray-900">
+                {formatMXN(price)}
+              </p>
+
+              {/* Property Details */}
+              <div className="flex items-center gap-2 text-xs text-gray-600 mt-1">
+                {bedrooms !== undefined && (
+                  <div className="flex items-center gap-0.5">
+                    <Bed className="h-3 w-3" />
+                    <span>{bedrooms}</span>
+                  </div>
+                )}
+                {bathrooms !== undefined && (
+                  <div className="flex items-center gap-0.5">
+                    <Bath className="h-3 w-3" />
+                    <span>{bathrooms}</span>
+                  </div>
+                )}
+                {area && (
+                  <div className="flex items-center gap-0.5">
+                    <Maximize className="h-3 w-3" />
+                    <span>{area} m²</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Address */}
+              <p className="text-xs text-gray-500 mt-1 truncate">{address}</p>
+            </div>
+
+            {/* Favorite Button */}
+            <div className="flex justify-end mt-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 hover:bg-gray-100"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  // TODO: Implement favorite functionality
+                }}
+              >
+                <Heart className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
