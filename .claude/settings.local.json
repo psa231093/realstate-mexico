@@ -28,7 +28,10 @@
       "Bash(cat:*)",
       "Bash(cmd //c \"taskkill //F //PID 7952\")",
       "Bash(npx kill-port:*)",
-      "Bash(if exist \"C:\\Users\\pablo\\OneDrive\\Desktop\\realestate-mexico\\.next\" rmdir /s /q \"C:\\Users\\pablo\\OneDrive\\Desktop\\realestate-mexico\\.next\")"
+      "Bash(if exist \"C:\\Users\\pablo\\OneDrive\\Desktop\\realestate-mexico\\.next\" rmdir /s /q \"C:\\Users\\pablo\\OneDrive\\Desktop\\realestate-mexico\\.next\")",
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)",
+      "Bash(npx shadcn:*)"
     ],
     "deny": [],
     "ask": []

@@ -91,7 +91,7 @@ export function UserMenu({ onSignInClick }: UserMenuProps) {
           {/* Menu Items */}
           <div className="py-2">
             <Link
-              href="/perfil"
+              href="/dashboard/perfil"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
@@ -99,7 +99,7 @@ export function UserMenu({ onSignInClick }: UserMenuProps) {
               Mi Perfil
             </Link>
             <Link
-              href="/guardados"
+              href="/dashboard/guardados"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
@@ -107,7 +107,7 @@ export function UserMenu({ onSignInClick }: UserMenuProps) {
               Propiedades Guardadas
             </Link>
             <Link
-              href="/mis-propiedades"
+              href="/dashboard/mis-propiedades"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
@@ -115,12 +115,12 @@ export function UserMenu({ onSignInClick }: UserMenuProps) {
               Mis Propiedades
             </Link>
             <Link
-              href="/configuracion"
+              href="/dashboard/configuracion"
               onClick={() => setIsOpen(false)}
               className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
             >
               <Settings className="h-4 w-4" />
-              Configuraci&oacute;n
+              Configuracion
             </Link>
           </div>
 

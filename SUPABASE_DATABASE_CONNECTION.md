@@ -154,3 +154,4 @@ npx prisma studio
 ```
 
 If these commands work, your connection is properly configured!
+
