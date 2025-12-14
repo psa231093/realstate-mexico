@@ -89,16 +89,16 @@ export function FiltersSidebar({ onFiltersChange }: FiltersSidebarProps) {
     (selectedState ? 1 : 0);
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6 sticky top-20">
+    <div className="bg-card rounded-lg border border-border p-6 sticky top-20">
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-bold">Filtros</h3>
+        <h3 className="text-lg font-bold text-card-foreground">Filtros</h3>
         {activeFilterCount > 0 && (
           <Button
             variant="ghost"
             size="sm"
             onClick={clearAllFilters}
-            className="text-blue-600 hover:text-blue-700"
+            className="text-primary hover:text-primary/80"
           >
             Limpiar todo
             {activeFilterCount > 0 && (
@@ -113,7 +113,7 @@ export function FiltersSidebar({ onFiltersChange }: FiltersSidebarProps) {
       <div className="space-y-6">
         {/* Price Range */}
         <div>
-          <label className="text-sm font-semibold text-gray-900 mb-3 block">
+          <label className="text-sm font-semibold text-foreground mb-3 block">
             Rango de Precio
           </label>
           <div className="grid grid-cols-2 gap-2">
@@ -138,7 +138,7 @@ export function FiltersSidebar({ onFiltersChange }: FiltersSidebarProps) {
 
         {/* Bedrooms */}
         <div>
-          <label className="text-sm font-semibold text-gray-900 mb-3 block">
+          <label className="text-sm font-semibold text-foreground mb-3 block">
             Recámaras
           </label>
           <div className="flex flex-wrap gap-2">
@@ -158,7 +158,7 @@ export function FiltersSidebar({ onFiltersChange }: FiltersSidebarProps) {
 
         {/* Bathrooms */}
         <div>
-          <label className="text-sm font-semibold text-gray-900 mb-3 block">
+          <label className="text-sm font-semibold text-foreground mb-3 block">
             Baños
           </label>
           <div className="flex flex-wrap gap-2">
@@ -178,22 +178,22 @@ export function FiltersSidebar({ onFiltersChange }: FiltersSidebarProps) {
 
         {/* Property Type */}
         <div>
-          <label className="text-sm font-semibold text-gray-900 mb-3 block">
+          <label className="text-sm font-semibold text-foreground mb-3 block">
             Tipo de Propiedad
           </label>
           <div className="space-y-2">
             {Object.entries(PROPERTY_TYPE_LABELS).map(([key, label]) => (
               <label
                 key={key}
-                className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded"
+                className="flex items-center gap-2 cursor-pointer hover:bg-accent p-2 rounded"
               >
                 <input
                   type="checkbox"
                   checked={selectedTypes.includes(key)}
                   onChange={() => toggleType(key)}
-                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                  className="w-4 h-4 text-primary rounded border-input focus:ring-primary"
                 />
-                <span className="text-sm text-gray-700">{label}</span>
+                <span className="text-sm text-card-foreground">{label}</span>
               </label>
             ))}
           </div>
@@ -201,7 +201,7 @@ export function FiltersSidebar({ onFiltersChange }: FiltersSidebarProps) {
 
         {/* State */}
         <div>
-          <label className="text-sm font-semibold text-gray-900 mb-3 block">
+          <label className="text-sm font-semibold text-foreground mb-3 block">
             Estado
           </label>
           <select
@@ -210,7 +210,7 @@ export function FiltersSidebar({ onFiltersChange }: FiltersSidebarProps) {
               setSelectedState(e.target.value);
               updateFilters({ state: e.target.value || null });
             }}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-input bg-background text-foreground rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value="">Todos los estados</option>
             {MEXICAN_STATES.map((state) => (
@@ -222,7 +222,7 @@ export function FiltersSidebar({ onFiltersChange }: FiltersSidebarProps) {
         </div>
 
         {/* Apply Filters Button (Mobile) */}
-        <Button className="w-full md:hidden bg-blue-600 hover:bg-blue-700">
+        <Button className="w-full md:hidden">
           Aplicar Filtros
         </Button>
       </div>

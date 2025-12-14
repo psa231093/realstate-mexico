@@ -52,9 +52,11 @@ export function PropertyMap({
 
       mapboxgl.default.accessToken = token;
 
+      const mapStyle = process.env.NEXT_PUBLIC_MAPBOX_STYLE || "mapbox://styles/mapbox/streets-v12";
+
       const map = new mapboxgl.default.Map({
         container: mapContainerRef.current!,
-        style: "mapbox://styles/mapbox/streets-v12",
+        style: mapStyle,
         center: [-99.1332, 19.4326], // Mexico City
         zoom: 11,
       });
@@ -158,8 +160,8 @@ export function PropertyMap({
     <div className="relative w-full h-full">
       <div ref={mapContainerRef} className="w-full h-full" />
       {!mapLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-          <div className="text-gray-500">Cargando mapa...</div>
+        <div className="absolute inset-0 flex items-center justify-center bg-muted">
+          <div className="text-muted-foreground">Cargando mapa...</div>
         </div>
       )}
     </div>

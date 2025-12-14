@@ -12,7 +12,7 @@ export function Footer() {
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <Home className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold">Bienes Raíces México</span>
+              <span className="text-lg font-bold text-foreground">Bienes Raíces México</span>
             </div>
             <p className="text-sm text-muted-foreground">
               Tu plataforma confiable para encontrar el hogar ideal en México.
@@ -21,7 +21,7 @@ export function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-semibold mb-4">Enlaces Rápidos</h3>
+            <h3 className="font-semibold mb-4 text-foreground">Enlaces Rápidos</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
@@ -52,7 +52,7 @@ export function Footer() {
 
           {/* Property Types */}
           <div>
-            <h3 className="font-semibold mb-4">Tipos de Propiedad</h3>
+            <h3 className="font-semibold mb-4 text-foreground">Tipos de Propiedad</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
@@ -91,7 +91,7 @@ export function Footer() {
 
           {/* Support */}
           <div>
-            <h3 className="font-semibold mb-4">Soporte</h3>
+            <h3 className="font-semibold mb-4 text-foreground">Soporte</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
@@ -129,7 +129,7 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="mt-12 pt-8 border-t text-center text-sm text-muted-foreground">
+        <div className="mt-12 pt-8 border-t border-border text-center text-sm text-muted-foreground">
           <p>&copy; {currentYear} Bienes Raíces México. Todos los derechos reservados.</p>
         </div>
       </div>

@@ -112,14 +112,14 @@ export default async function Home() {
       <SearchHero />
 
       {/* Trending Properties Section */}
-      <section className="py-16 bg-white">
+      <section className="py-16 bg-background">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">
+              <h2 className="text-2xl font-bold text-foreground">
                 Propiedades en Tendencia en M&eacute;xico
               </h2>
-              <p className="text-gray-600 mt-1">
+              <p className="text-muted-foreground mt-1">
                 Las propiedades m&aacute;s vistas y guardadas recientemente
               </p>
             </div>

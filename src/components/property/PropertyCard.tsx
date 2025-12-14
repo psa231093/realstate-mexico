@@ -37,9 +37,9 @@ export function PropertyCard({
 }: PropertyCardProps) {
   return (
     <div className="block group cursor-pointer" onClick={onClick}>
-      <div className="bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-xl transition-all duration-300">
+      <div className="bg-card rounded-lg overflow-hidden border border-border hover:shadow-xl transition-all duration-300">
         {/* Image Container */}
-        <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           <Image
             src={imageUrl}
             alt={title}
@@ -60,7 +60,7 @@ export function PropertyCard({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-3 right-3 bg-white/90 hover:bg-white rounded-full"
+            className="absolute top-3 right-3 bg-background/90 hover:bg-background rounded-full"
             onClick={(e) => {
               e.stopPropagation();
               // TODO: Implement favorite functionality
@@ -74,13 +74,13 @@ export function PropertyCard({
         <div className="p-4">
           {/* Price */}
           <div className="mb-2">
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-card-foreground">
               {formatMXN(price)}
             </p>
           </div>
 
           {/* Property Details */}
-          <div className="flex items-center gap-3 text-sm text-gray-600 mb-3">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">
             {bedrooms !== undefined && (
               <div className="flex items-center gap-1">
                 <Bed className="h-4 w-4" />
@@ -102,10 +102,10 @@ export function PropertyCard({
           </div>
 
           {/* Address */}
-          <p className="text-sm text-gray-600 truncate">{address}</p>
+          <p className="text-sm text-muted-foreground truncate">{address}</p>
 
           {/* Status */}
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-muted-foreground/70 mt-2">
             {status === "VENTA" ? "En Venta" : "En Renta"}
           </p>
         </div>

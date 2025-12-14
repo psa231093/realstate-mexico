@@ -50,13 +50,13 @@ export function PropertyCardCompact({
     >
       <div
         className={`
-          bg-white rounded-lg overflow-hidden border transition-all duration-200
-          ${isHovered ? "border-blue-500 shadow-lg" : "border-gray-200 hover:shadow-md"}
+          bg-card rounded-lg overflow-hidden border transition-all duration-200
+          ${isHovered ? "border-primary shadow-lg" : "border-border hover:shadow-md"}
         `}
       >
         <div className="flex">
           {/* Image */}
-          <div className="relative w-40 h-32 flex-shrink-0 overflow-hidden bg-gray-100">
+          <div className="relative w-40 h-32 flex-shrink-0 overflow-hidden bg-muted">
             <Image
               src={imageUrl}
               alt={title}
@@ -76,12 +76,12 @@ export function PropertyCardCompact({
           <div className="flex-1 p-3 flex flex-col justify-between min-w-0">
             <div>
               {/* Price */}
-              <p className="text-lg font-bold text-gray-900">
+              <p className="text-lg font-bold text-card-foreground">
                 {formatMXN(price)}
               </p>
 
               {/* Property Details */}
-              <div className="flex items-center gap-2 text-xs text-gray-600 mt-1">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
                 {bedrooms !== undefined && (
                   <div className="flex items-center gap-0.5">
                     <Bed className="h-3 w-3" />
@@ -103,7 +103,7 @@ export function PropertyCardCompact({
               </div>
 
               {/* Address */}
-              <p className="text-xs text-gray-500 mt-1 truncate">{address}</p>
+              <p className="text-xs text-muted-foreground/70 mt-1 truncate">{address}</p>
             </div>
 
             {/* Favorite Button */}
@@ -111,7 +111,7 @@ export function PropertyCardCompact({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 hover:bg-gray-100"
+                className="h-7 w-7 hover:bg-accent"
                 onClick={(e) => {
                   e.stopPropagation();
                   // TODO: Implement favorite functionality

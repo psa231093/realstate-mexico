@@ -213,24 +213,24 @@ export default function PropiedadesPage() {
 
   if (isLoading) {
     return (
-      <div className="h-[calc(100vh-64px)] flex items-center justify-center">
+      <div className="h-[calc(100vh-64px)] flex items-center justify-center bg-background">
         <div className="text-center">
-          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Cargando propiedades...</p>
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Cargando propiedades...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col">
+    <div className="h-[calc(100vh-64px)] flex flex-col bg-background">
       {/* Top Bar with Filters Toggle */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+      <div className="bg-card border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-lg font-semibold text-gray-900">
+          <h1 className="text-lg font-semibold text-foreground">
             {searchQuery ? `Resultados para "${searchQuery}"` : pageTitle}
           </h1>
-          <span className="text-sm text-gray-500">
+          <span className="text-sm text-muted-foreground">
             {filteredProperties.length} propiedades
           </span>
         </div>
@@ -238,7 +238,7 @@ export default function PropiedadesPage() {
         <div className="flex items-center gap-3">
           {/* Sort Dropdown */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 hidden sm:inline">Ordenar:</span>
+            <span className="text-sm text-muted-foreground hidden sm:inline">Ordenar:</span>
             <Button
               variant="outline"
               size="sm"
@@ -250,7 +250,7 @@ export default function PropiedadesPage() {
           </div>
 
           {/* View Toggle */}
-          <div className="flex items-center gap-1 border border-gray-200 rounded-md p-1">
+          <div className="flex items-center gap-1 border border-border rounded-md p-1">
             <Button
               variant={viewMode === "map" ? "secondary" : "ghost"}
               size="sm"
@@ -298,10 +298,10 @@ export default function PropiedadesPage() {
           </div>
 
           {/* Properties Sidebar */}
-          <div className="w-[400px] bg-gray-50 border-l border-gray-200 flex flex-col overflow-hidden">
+          <div className="w-[400px] bg-muted/50 border-l border-border flex flex-col overflow-hidden">
             {/* Sidebar Header */}
-            <div className="p-4 bg-white border-b border-gray-200">
-              <p className="text-sm font-medium text-gray-900">
+            <div className="p-4 bg-card border-b border-border">
+              <p className="text-sm font-medium text-foreground">
                 {filteredProperties.length} resultados
               </p>
             </div>
@@ -321,8 +321,8 @@ export default function PropiedadesPage() {
                 ))
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-gray-600 mb-2">No se encontraron propiedades</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-muted-foreground mb-2">No se encontraron propiedades</p>
+                  <p className="text-sm text-muted-foreground/70">
                     Intenta ajustar tus filtros
                   </p>
                 </div>
@@ -354,10 +354,10 @@ export default function PropiedadesPage() {
                   </div>
                 ) : (
                   <div className="text-center py-12">
-                    <p className="text-lg text-gray-600 mb-2">
+                    <p className="text-lg text-muted-foreground mb-2">
                       No se encontraron propiedades
                     </p>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-muted-foreground/70">
                       Intenta ajustar tus filtros para ver m&aacute;s resultados
                     </p>
                   </div>
@@ -396,9 +396,9 @@ export default function PropiedadesPage() {
             className="absolute inset-0 bg-black/50"
             onClick={() => setShowFilters(false)}
           />
-          <div className="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-white shadow-xl overflow-y-auto">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Filtros</h2>
+          <div className="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-card shadow-xl overflow-y-auto">
+            <div className="p-4 border-b border-border flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground">Filtros</h2>
               <Button
                 variant="ghost"
                 size="icon"
@@ -413,7 +413,7 @@ export default function PropiedadesPage() {
               }} />
             </div>
             {/* Apply Button for Drawer */}
-            <div className="sticky bottom-0 p-4 bg-white border-t border-gray-200">
+            <div className="sticky bottom-0 p-4 bg-card border-t border-border">
               <Button
                 className="w-full"
                 onClick={() => setShowFilters(false)}

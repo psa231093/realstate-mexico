@@ -23,7 +23,12 @@
       "Bash(git branch:*)",
       "Bash(git push:*)",
       "Bash(if exist .nextdevlock del /f .nextdevlock)",
-      "Bash(npx prisma db push:*)"
+      "Bash(npx prisma db push:*)",
+      "WebSearch",
+      "Bash(cat:*)",
+      "Bash(cmd //c \"taskkill //F //PID 7952\")",
+      "Bash(npx kill-port:*)",
+      "Bash(if exist \"C:\\Users\\pablo\\OneDrive\\Desktop\\realestate-mexico\\.next\" rmdir /s /q \"C:\\Users\\pablo\\OneDrive\\Desktop\\realestate-mexico\\.next\")"
     ],
     "deny": [],
     "ask": []
