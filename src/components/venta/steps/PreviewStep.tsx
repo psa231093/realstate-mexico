@@ -9,30 +9,20 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 export function PreviewStep() {
-  const { data, setCurrentStep, publishListing, clearDraft } = usePropertyListing();
+  const { data, setCurrentStep, publishListing, isPublishing } = usePropertyListing();
   const router = useRouter();
-  const [isPublishing, setIsPublishing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handlePublish = async () => {
     try {
-      setIsPublishing(true);
-      const published = publishListing();
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
+      setError(null);
+      const { id, slug } = await publishListing();
       // Redirect to success page
-      router.push(`/venta/particular/success?id=${published.id}`);
-    } catch (error) {
-      console.error("Error publishing:", error);
-      alert("Hubo un error al publicar. Por favor intente nuevamente.");
-    } finally {
-      setIsPublishing(false);
+      router.push(`/venta/particular/success?id=${id}&slug=${slug}`);
+    } catch (err) {
+      console.error("Error publishing:", err);
+      setError(err instanceof Error ? err.message : "Hubo un error al publicar. Por favor intente nuevamente.");
     }
-  };
-
-  const getAmenityLabel = (id: string) => {
-    return AMENITIES.find((a) => a.id === id)?.label || id;
   };
 
   const isFormComplete = () => {
@@ -56,6 +46,10 @@ export function PreviewStep() {
     );
   };
 
+  const mainPhoto = data.photos && data.photos.length > 0
+    ? data.photos[data.mainPhotoIndex || 0]
+    : null;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -66,31 +60,38 @@ export function PreviewStep() {
             Revisa y Publica
           </h3>
           <p className="text-sm text-blue-700">
-            Verifica que toda la información sea correcta antes de publicar
+            Verifica que toda la informaci&oacute;n sea correcta antes de publicar
           </p>
         </div>
       </div>
+
+      {/* Error Message */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <p className="text-sm text-red-800">{error}</p>
+        </div>
+      )}
 
       {/* Completion Status */}
       {!isFormComplete() && (
         <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
           <h4 className="font-semibold text-amber-900 mb-2">
-            ⚠️ Información Incompleta
+            Informaci&oacute;n Incompleta
           </h4>
           <p className="text-sm text-amber-800 mb-3">
             Por favor completa todos los campos requeridos antes de publicar:
           </p>
           <ul className="text-sm text-amber-800 space-y-1">
-            {!data.street && <li>• Dirección completa</li>}
-            {!data.type && <li>• Tipo de propiedad</li>}
-            {!data.status && <li>• Operación (Venta/Renta)</li>}
-            {!data.price && <li>• Precio</li>}
-            {!data.area && <li>• Área</li>}
-            {!data.description && <li>• Descripción</li>}
-            {(!data.photos || data.photos.length === 0) && <li>• Al menos una foto</li>}
-            {!data.contactName && <li>• Nombre de contacto</li>}
-            {!data.contactEmail && <li>• Email de contacto</li>}
-            {!data.contactPhone && <li>• Teléfono de contacto</li>}
+            {!data.street && <li>&bull; Direcci&oacute;n completa</li>}
+            {!data.type && <li>&bull; Tipo de propiedad</li>}
+            {!data.status && <li>&bull; Operaci&oacute;n (Venta/Renta)</li>}
+            {!data.price && <li>&bull; Precio</li>}
+            {!data.area && <li>&bull; &Aacute;rea</li>}
+            {!data.description && <li>&bull; Descripci&oacute;n</li>}
+            {(!data.photos || data.photos.length === 0) && <li>&bull; Al menos una foto</li>}
+            {!data.contactName && <li>&bull; Nombre de contacto</li>}
+            {!data.contactEmail && <li>&bull; Email de contacto</li>}
+            {!data.contactPhone && <li>&bull; Tel&eacute;fono de contacto</li>}
           </ul>
         </div>
       )}
@@ -98,10 +99,10 @@ export function PreviewStep() {
       {/* Property Preview Card */}
       <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-white">
         {/* Main Photo */}
-        {data.photos && data.photos.length > 0 ? (
+        {mainPhoto ? (
           <div className="relative aspect-video bg-gray-200">
             <img
-              src={data.photos[data.mainPhotoIndex || 0]}
+              src={mainPhoto.url}
               alt="Vista principal"
               className="w-full h-full object-cover"
             />
@@ -126,10 +127,10 @@ export function PreviewStep() {
                 <span>{data.bedrooms} rec</span>
               )}
               {data.bathrooms && (
-                <span>{data.bathrooms} baños</span>
+                <span>{data.bathrooms} ba&ntilde;os</span>
               )}
               {data.area && (
-                <span>{data.area} m²</span>
+                <span>{data.area} m&sup2;</span>
               )}
             </div>
           </div>
@@ -139,7 +140,7 @@ export function PreviewStep() {
             <p className="text-gray-700 font-medium">
               {data.street && data.exteriorNumber
                 ? `${data.street} ${data.exteriorNumber}`
-                : "Sin dirección"}
+                : "Sin direcci&oacute;n"}
               {data.interiorNumber && ` Int. ${data.interiorNumber}`}
             </p>
             <p className="text-gray-600 text-sm">
@@ -168,7 +169,7 @@ export function PreviewStep() {
                     Detalles de la Propiedad
                   </h3>
                   <p className="text-sm text-gray-600">
-                    Información adicional que ayudará a los compradores
+                    Informaci&oacute;n adicional que ayudar&aacute; a los compradores
                   </p>
                 </div>
               </div>
@@ -182,7 +183,7 @@ export function PreviewStep() {
             {/* Description */}
             <div className="mb-6">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Descripción {!data.description && <span className="text-red-500">*</span>}
+                Descripci&oacute;n {!data.description && <span className="text-red-500">*</span>}
               </label>
               {data.description ? (
                 <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-700 whitespace-pre-line min-h-[100px]">
@@ -190,22 +191,19 @@ export function PreviewStep() {
                 </div>
               ) : (
                 <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-400 min-h-[100px]">
-                  Describa su propiedad... Incluya características especiales, condición actual, razones por las que es un buen lugar para vivir, etc.
+                  Describa su propiedad...
                 </div>
               )}
-              <p className="text-xs text-gray-500 mt-1">
-                Mínimo 50 caracteres. Sea específico y honesto.
-              </p>
             </div>
 
             {/* Additional Details */}
             <div className="grid md:grid-cols-3 gap-4 mb-6">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Año de Construcción
+                  A&ntilde;o de Construcci&oacute;n
                 </label>
                 <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-700">
-                  {data.yearBuilt ? data.yearBuilt : "Ej: 2015"}
+                  {data.yearBuilt ? data.yearBuilt : "No especificado"}
                 </div>
               </div>
               <div>
@@ -213,7 +211,7 @@ export function PreviewStep() {
                   Estacionamientos
                 </label>
                 <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-700">
-                  {data.parkingSpaces !== undefined ? data.parkingSpaces : "Ej: 2"}
+                  {data.parkingSpaces !== undefined ? data.parkingSpaces : "No especificado"}
                 </div>
               </div>
               <div>
@@ -221,7 +219,7 @@ export function PreviewStep() {
                   Pisos/Niveles
                 </label>
                 <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-700">
-                  {data.floors ? data.floors : "Ej: 2"}
+                  {data.floors ? data.floors : "No especificado"}
                 </div>
               </div>
             </div>
@@ -284,7 +282,7 @@ export function PreviewStep() {
           className="gap-2"
         >
           <Edit className="w-4 h-4" />
-          Editar Dirección
+          Editar Direcci&oacute;n
         </Button>
         <Button
           variant="outline"
@@ -292,7 +290,7 @@ export function PreviewStep() {
           className="gap-2"
         >
           <Edit className="w-4 h-4" />
-          Editar Datos Básicos
+          Editar Datos B&aacute;sicos
         </Button>
         <Button
           variant="outline"
@@ -332,7 +330,7 @@ export function PreviewStep() {
           {isPublishing ? "Publicando..." : "Publicar Propiedad"}
         </Button>
         <p className="text-xs text-gray-500 text-center mt-3">
-          Al publicar, aceptas nuestros términos y condiciones
+          Al publicar, aceptas nuestros t&eacute;rminos y condiciones
         </p>
       </div>
     </div>

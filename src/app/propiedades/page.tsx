@@ -6,14 +6,30 @@ import { PropertyDetailModal } from "@/components/property/PropertyDetailModal";
 import { PropertyMap } from "@/components/map/PropertyMap";
 import { FiltersSidebar } from "@/components/search/FiltersSidebar";
 import { Button } from "@/components/ui/button";
-import { LayoutGrid, Map as MapIcon, ChevronDown, SlidersHorizontal, X } from "lucide-react";
-import { useState, useMemo } from "react";
+import { LayoutGrid, Map as MapIcon, ChevronDown, SlidersHorizontal, X, Loader2 } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 
-// Extended sample data with coordinates - in production, this would come from the database
-const sampleProperties = [
+interface Property {
+  id: string;
+  slug: string;
+  title: string;
+  price: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  area?: number;
+  imageUrl: string;
+  address: string;
+  status: string;
+  badge?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+// Fallback sample data for when database is empty or API fails
+const fallbackProperties: Property[] = [
   {
-    id: "1",
+    id: "sample-1",
     slug: "casa-polanco-cdmx",
     title: "Hermosa Casa en Polanco",
     price: 12500000,
@@ -21,14 +37,14 @@ const sampleProperties = [
     bathrooms: 3.5,
     area: 350,
     imageUrl: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800",
-    address: "Polanco, Miguel Hidalgo, Ciudad de México, 11560",
+    address: "Polanco, Miguel Hidalgo, Ciudad de M\u00e9xico, 11560",
     status: "VENTA",
     badge: "Destacada",
     latitude: 19.4352,
     longitude: -99.1944,
   },
   {
-    id: "2",
+    id: "sample-2",
     slug: "departamento-condesa",
     title: "Departamento Moderno Condesa",
     price: 4500000,
@@ -36,14 +52,14 @@ const sampleProperties = [
     bathrooms: 2,
     area: 120,
     imageUrl: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800",
-    address: "Condesa, Cuauhtémoc, Ciudad de México, 06140",
+    address: "Condesa, Cuauht\u00e9moc, Ciudad de M\u00e9xico, 06140",
     status: "VENTA",
-    badge: "Precio Rebajado",
+    badge: "Nueva",
     latitude: 19.4111,
     longitude: -99.1747,
   },
   {
-    id: "3",
+    id: "sample-3",
     slug: "casa-santa-fe",
     title: "Casa en Santa Fe",
     price: 18900000,
@@ -51,91 +67,42 @@ const sampleProperties = [
     bathrooms: 4,
     area: 450,
     imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800",
-    address: "Santa Fe, Cuajimalpa, Ciudad de México, 05348",
+    address: "Santa Fe, Cuajimalpa, Ciudad de M\u00e9xico, 05348",
     status: "VENTA",
     latitude: 19.3664,
     longitude: -99.2618,
   },
   {
-    id: "4",
+    id: "sample-4",
     slug: "casa-coyoacan",
-    title: "Casa Colonial Coyoacán",
+    title: "Casa Colonial Coyoac\u00e1n",
     price: 8750000,
     bedrooms: 3,
     bathrooms: 2.5,
     area: 280,
     imageUrl: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
-    address: "Coyoacán, Ciudad de México, 04100",
+    address: "Coyoac\u00e1n, Ciudad de M\u00e9xico, 04100",
     status: "VENTA",
     latitude: 19.3467,
     longitude: -99.1617,
   },
-  {
-    id: "5",
-    slug: "departamento-roma-norte",
-    title: "Departamento Loft Roma Norte",
-    price: 3800000,
-    bedrooms: 1,
-    bathrooms: 1,
-    area: 85,
-    imageUrl: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800",
-    address: "Roma Norte, Cuauhtémoc, Ciudad de México, 06700",
-    status: "VENTA",
-    latitude: 19.4195,
-    longitude: -99.1619,
-  },
-  {
-    id: "6",
-    slug: "casa-san-angel",
-    title: "Casa con Jardín San Ángel",
-    price: 15200000,
-    bedrooms: 4,
-    bathrooms: 3,
-    area: 400,
-    imageUrl: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800",
-    address: "San Ángel, Álvaro Obregón, Ciudad de México, 01000",
-    status: "VENTA",
-    badge: "Nueva",
-    latitude: 19.3488,
-    longitude: -99.1901,
-  },
-  {
-    id: "7",
-    slug: "departamento-del-valle",
-    title: "Departamento Del Valle",
-    price: 5600000,
-    bedrooms: 3,
-    bathrooms: 2,
-    area: 145,
-    imageUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
-    address: "Del Valle, Benito Juárez, Ciudad de México, 03100",
-    status: "VENTA",
-    latitude: 19.3891,
-    longitude: -99.1708,
-  },
-  {
-    id: "8",
-    slug: "casa-tlalpan",
-    title: "Casa Amplia Tlalpan",
-    price: 9800000,
-    bedrooms: 4,
-    bathrooms: 3,
-    area: 320,
-    imageUrl: "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=800",
-    address: "Tlalpan, Ciudad de México, 14000",
-    status: "VENTA",
-    latitude: 19.2866,
-    longitude: -99.1669,
-  },
 ];
 
 export default function PropiedadesPage() {
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"map" | "grid">("map");
-  const [sortBy, setSortBy] = useState("newest");
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<any>({
+  const [filters, setFilters] = useState<{
+    priceMin: number | null;
+    priceMax: number | null;
+    bedrooms: number[];
+    bathrooms: number[];
+    types: string[];
+    state: string | null;
+  }>({
     priceMin: null,
     priceMax: null,
     bedrooms: [],
@@ -144,21 +111,72 @@ export default function PropiedadesPage() {
     state: null,
   });
 
-  // Find selected property for modal
-  const selectedProperty = selectedPropertyId
-    ? sampleProperties.find((p) => p.id === selectedPropertyId)
-    : null;
-
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get("q");
   const statusParam = searchParams.get("status");
 
+  // Fetch properties from API
+  useEffect(() => {
+    async function fetchProperties() {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("limit", "50");
+
+        if (statusParam) {
+          params.set("status", statusParam);
+        }
+        if (searchQuery) {
+          params.set("search", searchQuery);
+        }
+
+        const response = await fetch(`/api/properties?${params.toString()}`);
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch properties");
+        }
+
+        const data = await response.json();
+
+        if (data.properties && data.properties.length > 0) {
+          const mappedProperties: Property[] = data.properties.map((p: any) => ({
+            id: p.id,
+            slug: p.slug,
+            title: p.title,
+            price: Number(p.price),
+            bedrooms: p.bedrooms || undefined,
+            bathrooms: p.bathrooms ? Number(p.bathrooms) : undefined,
+            area: p.areaTotal ? Number(p.areaTotal) : undefined,
+            imageUrl: p.mainImageUrl || p.images?.[0]?.url || "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800",
+            address: `${p.colonia}, ${p.municipality}, ${p.state}`,
+            status: p.status,
+            badge: p.featured ? "Destacada" : undefined,
+            latitude: p.latitude ? Number(p.latitude) : undefined,
+            longitude: p.longitude ? Number(p.longitude) : undefined,
+          }));
+          setProperties(mappedProperties);
+        } else {
+          setProperties(fallbackProperties);
+        }
+      } catch (error) {
+        console.error("Error fetching properties:", error);
+        setProperties(fallbackProperties);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchProperties();
+  }, [searchQuery, statusParam]);
+
+  // Find selected property for modal
+  const selectedProperty = selectedPropertyId
+    ? properties.find((p) => p.id === selectedPropertyId)
+    : null;
+
   // Filter properties based on active filters
   const filteredProperties = useMemo(() => {
-    return sampleProperties.filter((property) => {
-      // Status filter from URL
-      if (statusParam && property.status !== statusParam) return false;
-
+    return properties.filter((property) => {
       // Price filter
       if (filters.priceMin && property.price < filters.priceMin) return false;
       if (filters.priceMax && property.price > filters.priceMax) return false;
@@ -166,7 +184,7 @@ export default function PropiedadesPage() {
       // Bedrooms filter
       if (filters.bedrooms.length > 0 && property.bedrooms) {
         const hasMatch = filters.bedrooms.some((bed: number) => {
-          if (bed === 5) return property.bedrooms >= 5;
+          if (bed === 5) return property.bedrooms! >= 5;
           return property.bedrooms === bed;
         });
         if (!hasMatch) return false;
@@ -175,8 +193,8 @@ export default function PropiedadesPage() {
       // Bathrooms filter
       if (filters.bathrooms.length > 0 && property.bathrooms) {
         const hasMatch = filters.bathrooms.some((bath: number) => {
-          if (bath === 4) return property.bathrooms >= 4;
-          return property.bathrooms >= bath && property.bathrooms < bath + 1;
+          if (bath === 4) return property.bathrooms! >= 4;
+          return property.bathrooms! >= bath && property.bathrooms! < bath + 1;
         });
         if (!hasMatch) return false;
       }
@@ -186,21 +204,23 @@ export default function PropiedadesPage() {
         return false;
       }
 
-      // Search query filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        return (
-          property.title.toLowerCase().includes(query) ||
-          property.address.toLowerCase().includes(query)
-        );
-      }
-
       return true;
     });
-  }, [filters, searchQuery, statusParam]);
+  }, [properties, filters]);
 
   // Get page title based on status
   const pageTitle = statusParam === "RENTA" ? "Propiedades en Renta" : "Propiedades en Venta";
+
+  if (isLoading) {
+    return (
+      <div className="h-[calc(100vh-64px)] flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600 mx-auto mb-4" />
+          <p className="text-gray-600">Cargando propiedades...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col">
@@ -224,7 +244,7 @@ export default function PropiedadesPage() {
               size="sm"
               className="gap-1"
             >
-              <span className="text-sm">Más recientes</span>
+              <span className="text-sm">M&aacute;s recientes</span>
               <ChevronDown className="h-4 w-4" />
             </Button>
           </div>
@@ -251,7 +271,7 @@ export default function PropiedadesPage() {
             </Button>
           </div>
 
-          {/* Filters Button (Mobile & Grid view) */}
+          {/* Filters Button */}
           <Button
             variant="outline"
             size="sm"
@@ -266,7 +286,7 @@ export default function PropiedadesPage() {
 
       {/* Main Content */}
       {viewMode === "map" ? (
-        // Map View - Zillow Style
+        // Map View
         <div className="flex-1 flex overflow-hidden">
           {/* Map Section */}
           <div className="flex-1 relative">
@@ -338,7 +358,7 @@ export default function PropiedadesPage() {
                       No se encontraron propiedades
                     </p>
                     <p className="text-sm text-gray-500">
-                      Intenta ajustar tus filtros para ver más resultados
+                      Intenta ajustar tus filtros para ver m&aacute;s resultados
                     </p>
                   </div>
                 )}
@@ -369,7 +389,7 @@ export default function PropiedadesPage() {
         </div>
       )}
 
-      {/* Filters Drawer - Works in map view (all screens) and grid view (mobile only) */}
+      {/* Filters Drawer */}
       {showFilters && (
         <div className={`fixed inset-0 z-50 ${viewMode === "grid" ? "lg:hidden" : ""}`}>
           <div

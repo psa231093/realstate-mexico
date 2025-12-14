@@ -1,15 +1,17 @@
 "use client";
 
-import { usePropertyListing } from "@/contexts/PropertyListingContext";
+import { usePropertyListing, PropertyPhoto } from "@/contexts/PropertyListingContext";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Image as ImageIcon, Upload, Star, X } from "lucide-react";
 import { useState } from "react";
 
 export function PhotosStep() {
-  const { data, updateData } = usePropertyListing();
+  const { data, updateData, uploadPhoto } = usePropertyListing();
+  const { user } = useAuth();
   const [isDragging, setIsDragging] = useState(false);
-  const [isCompressing, setIsCompressing] = useState(false);
-  const [compressionProgress, setCompressionProgress] = useState(0);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -18,67 +20,74 @@ export function PhotosStep() {
     }
   };
 
-  const compressImage = async (base64Image: string): Promise<string> => {
-    try {
-      const response = await fetch("/api/compress-image", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ image: base64Image }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Compression failed");
-      }
-
-      const result = await response.json();
-      console.log(
-        `Image compressed: ${result.stats.savedPercentage}% reduction`
-      );
-      return result.compressedImage;
-    } catch (error) {
-      console.error("Compression error:", error);
-      // Return original image if compression fails
-      return base64Image;
-    }
-  };
-
   const handleFiles = async (files: File[]) => {
-    setIsCompressing(true);
-    setCompressionProgress(0);
+    setIsUploading(true);
+    setUploadProgress(0);
 
     try {
-      // Convert files to base64
-      const readers = files.map((file) => {
-        return new Promise<string>((resolve) => {
-          const reader = new FileReader();
-          reader.onloadend = () => {
-            resolve(reader.result as string);
-          };
-          reader.readAsDataURL(file);
-        });
-      });
+      const newPhotos: PropertyPhoto[] = [];
 
-      const base64Images = await Promise.all(readers);
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
 
-      // Compress each image
-      const compressedImages: string[] = [];
-      for (let i = 0; i < base64Images.length; i++) {
-        const compressed = await compressImage(base64Images[i]);
-        compressedImages.push(compressed);
-        setCompressionProgress(Math.round(((i + 1) / base64Images.length) * 100));
+        // Validate file type
+        if (!file.type.startsWith("image/")) {
+          continue;
+        }
+
+        // Validate file size (max 10MB)
+        if (file.size > 10 * 1024 * 1024) {
+          alert(`El archivo ${file.name} es demasiado grande. Máximo 10MB.`);
+          continue;
+        }
+
+        if (user) {
+          // User is logged in - upload directly to Supabase
+          try {
+            const uploaded = await uploadPhoto(file);
+            newPhotos.push(uploaded);
+          } catch (error) {
+            console.error("Error uploading image:", error);
+            // Fallback to local preview
+            const base64 = await fileToBase64(file);
+            newPhotos.push({
+              url: base64,
+              file,
+              isUploaded: false,
+            });
+          }
+        } else {
+          // User not logged in - store locally for now
+          const base64 = await fileToBase64(file);
+          newPhotos.push({
+            url: base64,
+            file,
+            isUploaded: false,
+          });
+        }
+
+        setUploadProgress(Math.round(((i + 1) / files.length) * 100));
       }
 
       const currentPhotos = data.photos || [];
-      updateData({ photos: [...currentPhotos, ...compressedImages] });
+      updateData({ photos: [...currentPhotos, ...newPhotos] });
     } catch (error) {
       console.error("Error processing images:", error);
       alert("Hubo un error al procesar las imágenes. Por favor intente nuevamente.");
     } finally {
-      setIsCompressing(false);
-      setCompressionProgress(0);
+      setIsUploading(false);
+      setUploadProgress(0);
     }
+  };
+
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        resolve(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    });
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -134,7 +143,7 @@ export function PhotosStep() {
             Fotos de la Propiedad
           </h3>
           <p className="text-sm text-blue-700">
-            Las propiedades con fotos de calidad reciben hasta 5x más consultas
+            Las propiedades con fotos de calidad reciben hasta 5x m&aacute;s consultas
           </p>
         </div>
       </div>
@@ -152,7 +161,7 @@ export function PhotosStep() {
       >
         <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
         <h3 className="text-lg font-semibold text-gray-900 mb-2">
-          Arrastra fotos aquí
+          Arrastra fotos aqu&iacute;
         </h3>
         <p className="text-sm text-gray-600 mb-4">
           o haz clic para seleccionar archivos
@@ -164,30 +173,30 @@ export function PhotosStep() {
           onChange={handleFileInput}
           className="hidden"
           id="file-upload"
-          disabled={isCompressing}
+          disabled={isUploading}
         />
         <label htmlFor="file-upload">
-          <Button type="button" variant="outline" asChild disabled={isCompressing}>
+          <Button type="button" variant="outline" asChild disabled={isUploading}>
             <span className="cursor-pointer">
-              {isCompressing ? "Procesando..." : "Seleccionar Fotos"}
+              {isUploading ? "Subiendo..." : "Seleccionar Fotos"}
             </span>
           </Button>
         </label>
         <p className="text-xs text-gray-500 mt-3">
-          Formatos aceptados: JPG, PNG, WEBP. Máximo 10MB por imagen.
+          Formatos aceptados: JPG, PNG, WEBP, GIF. M&aacute;ximo 10MB por imagen.
         </p>
 
-        {/* Compression Progress */}
-        {isCompressing && (
+        {/* Upload Progress */}
+        {isUploading && (
           <div className="mt-4">
             <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
               <div
                 className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                style={{ width: `${compressionProgress}%` }}
+                style={{ width: `${uploadProgress}%` }}
               />
             </div>
             <p className="text-sm text-blue-600 font-medium">
-              Optimizando imágenes... {compressionProgress}%
+              Subiendo im&aacute;genes... {uploadProgress}%
             </p>
           </div>
         )}
@@ -196,27 +205,15 @@ export function PhotosStep() {
       {/* Photo Guidelines */}
       <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
         <h4 className="font-semibold text-amber-900 mb-2">
-          💡 Consejos para mejores fotos
+          Consejos para mejores fotos
         </h4>
         <ul className="text-sm text-amber-800 space-y-1">
-          <li>• Toma fotos en buena iluminación natural</li>
-          <li>• Incluye todas las habitaciones y áreas principales</li>
-          <li>• Muestra las mejores características de la propiedad</li>
-          <li>• Mantén los espacios limpios y ordenados</li>
-          <li>• Evita fotos borrosas o mal encuadradas</li>
+          <li>&bull; Toma fotos en buena iluminaci&oacute;n natural</li>
+          <li>&bull; Incluye todas las habitaciones y &aacute;reas principales</li>
+          <li>&bull; Muestra las mejores caracter&iacute;sticas de la propiedad</li>
+          <li>&bull; Mant&eacute;n los espacios limpios y ordenados</li>
+          <li>&bull; Evita fotos borrosas o mal encuadradas</li>
         </ul>
-      </div>
-
-      {/* Optimization Notice */}
-      <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-        <h4 className="font-semibold text-green-900 mb-2">
-          ✨ Optimización Automática
-        </h4>
-        <p className="text-sm text-green-800">
-          Tus imágenes serán optimizadas automáticamente para reducir el tamaño del
-          archivo sin perder calidad, ahorrando espacio de almacenamiento y mejorando
-          la velocidad de carga.
-        </p>
       </div>
 
       {/* Photos Grid */}
@@ -232,10 +229,17 @@ export function PhotosStep() {
                 className="relative group aspect-video bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200"
               >
                 <img
-                  src={photo}
+                  src={photo.url}
                   alt={`Foto ${index + 1}`}
                   className="w-full h-full object-cover"
                 />
+
+                {/* Upload Status Badge */}
+                {!photo.isUploaded && (
+                  <div className="absolute top-2 right-2 bg-orange-500 text-white px-2 py-1 rounded text-xs font-semibold">
+                    Local
+                  </div>
+                )}
 
                 {/* Main Photo Badge */}
                 {data.mainPhotoIndex === index && (
@@ -252,6 +256,7 @@ export function PhotosStep() {
                     variant="secondary"
                     onClick={() => setMainPhoto(index)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Establecer como principal"
                   >
                     <Star className="w-4 h-4" />
                   </Button>
@@ -261,8 +266,9 @@ export function PhotosStep() {
                       variant="secondary"
                       onClick={() => movePhoto(index, "left")}
                       className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Mover a la izquierda"
                     >
-                      ←
+                      &larr;
                     </Button>
                   )}
                   {index < (data.photos?.length || 0) - 1 && (
@@ -271,8 +277,9 @@ export function PhotosStep() {
                       variant="secondary"
                       onClick={() => movePhoto(index, "right")}
                       className="opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Mover a la derecha"
                     >
-                      →
+                      &rarr;
                     </Button>
                   )}
                   <Button
@@ -280,6 +287,7 @@ export function PhotosStep() {
                     variant="destructive"
                     onClick={() => removePhoto(index)}
                     className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Eliminar"
                   >
                     <X className="w-4 h-4" />
                   </Button>

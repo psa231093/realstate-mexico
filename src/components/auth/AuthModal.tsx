@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 
@@ -20,6 +20,7 @@ export function AuthModal({
   sellerTitle,
   redirectPath,
 }: AuthModalProps) {
+  const { signInWithGoogle } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -27,9 +28,8 @@ export function AuthModal({
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      await signIn("google", {
-        callbackUrl: `${redirectPath}?sellerType=${sellerType}`,
-      });
+      const fullRedirectPath = `${redirectPath}?sellerType=${sellerType}`;
+      await signInWithGoogle(fullRedirectPath);
     } catch (error) {
       console.error("Error signing in:", error);
       setIsLoading(false);
@@ -80,8 +80,8 @@ export function AuthModal({
 
           {/* Description */}
           <p className="text-gray-600 mb-8">
-            Regístrate como <span className="font-semibold">{sellerTitle}</span>{" "}
-            para continuar con tu publicación
+            Reg&iacute;strate como <span className="font-semibold">{sellerTitle}</span>{" "}
+            para continuar con tu publicaci&oacute;n
           </p>
 
           {/* Google Sign In Button */}
@@ -125,11 +125,11 @@ export function AuthModal({
           <p className="text-xs text-gray-500 mt-6">
             Al registrarte, aceptas nuestros{" "}
             <a href="/terminos" className="text-blue-600 hover:underline">
-              Términos de Servicio
+              T&eacute;rminos de Servicio
             </a>{" "}
             y{" "}
             <a href="/privacidad" className="text-blue-600 hover:underline">
-              Política de Privacidad
+              Pol&iacute;tica de Privacidad
             </a>
           </p>
         </div>

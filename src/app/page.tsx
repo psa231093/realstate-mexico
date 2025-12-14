@@ -3,11 +3,12 @@ import { PropertyCard } from "@/components/property/PropertyCard";
 import { BuyAbilitySection } from "@/components/search/BuyAbilitySection";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { prisma } from "@/lib/prisma";
 
-// Sample data - will be replaced with real data from database
-const sampleProperties = [
+// Fallback sample data for when database is empty
+const fallbackProperties = [
   {
-    id: "1",
+    id: "sample-1",
     slug: "casa-polanco-cdmx",
     title: "Hermosa Casa en Polanco",
     price: 12500000,
@@ -15,12 +16,12 @@ const sampleProperties = [
     bathrooms: 3.5,
     area: 350,
     imageUrl: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800",
-    address: "Polanco, Miguel Hidalgo, Ciudad de México, 11560",
+    address: "Polanco, Miguel Hidalgo, Ciudad de M\u00e9xico, 11560",
     status: "VENTA",
     badge: "Destacada",
   },
   {
-    id: "2",
+    id: "sample-2",
     slug: "departamento-condesa",
     title: "Departamento Moderno Condesa",
     price: 4500000,
@@ -28,12 +29,12 @@ const sampleProperties = [
     bathrooms: 2,
     area: 120,
     imageUrl: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800",
-    address: "Condesa, Cuauhtémoc, Ciudad de México, 06140",
+    address: "Condesa, Cuauht\u00e9moc, Ciudad de M\u00e9xico, 06140",
     status: "VENTA",
-    badge: "Precio Rebajado: $4,500,000 (11/30)",
+    badge: "Nueva",
   },
   {
-    id: "3",
+    id: "sample-3",
     slug: "casa-santa-fe",
     title: "Casa en Santa Fe",
     price: 18900000,
@@ -41,26 +42,70 @@ const sampleProperties = [
     bathrooms: 4,
     area: 450,
     imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800",
-    address: "Santa Fe, Cuajimalpa, Ciudad de México, 05348",
+    address: "Santa Fe, Cuajimalpa, Ciudad de M\u00e9xico, 05348",
     status: "VENTA",
-    badge: "Chimenea Eléctrica",
+    badge: "Premium",
   },
   {
-    id: "4",
+    id: "sample-4",
     slug: "casa-coyoacan",
-    title: "Casa Colonial Coyoacán",
+    title: "Casa Colonial Coyoac\u00e1n",
     price: 8750000,
     bedrooms: 3,
     bathrooms: 2.5,
     area: 280,
     imageUrl: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
-    address: "Coyoacán, Ciudad de México, 04100",
+    address: "Coyoac\u00e1n, Ciudad de M\u00e9xico, 04100",
     status: "VENTA",
-    badge: "Casa Adosada",
+    badge: "Destacada",
   },
 ];
 
-export default function Home() {
+async function getProperties() {
+  try {
+    const properties = await prisma.property.findMany({
+      where: {
+        active: true,
+      },
+      orderBy: [
+        { featured: "desc" },
+        { createdAt: "desc" },
+      ],
+      take: 8,
+      include: {
+        images: {
+          orderBy: { order: "asc" },
+          take: 1,
+        },
+      },
+    });
+
+    if (properties.length === 0) {
+      return fallbackProperties;
+    }
+
+    return properties.map((property) => ({
+      id: property.id,
+      slug: property.slug,
+      title: property.title,
+      price: Number(property.price),
+      bedrooms: property.bedrooms || undefined,
+      bathrooms: property.bathrooms ? Number(property.bathrooms) : undefined,
+      area: property.areaTotal ? Number(property.areaTotal) : undefined,
+      imageUrl: property.mainImageUrl || property.images[0]?.url || "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800",
+      address: `${property.colonia}, ${property.municipality}, ${property.state}`,
+      status: property.status,
+      badge: property.featured ? "Destacada" : undefined,
+    }));
+  } catch (error) {
+    console.error("Error fetching properties:", error);
+    return fallbackProperties;
+  }
+}
+
+export default async function Home() {
+  const properties = await getProperties();
+
   return (
     <main>
       {/* Hero Section */}
@@ -72,10 +117,10 @@ export default function Home() {
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-2xl font-bold text-gray-900">
-                Propiedades en Tendencia en Ciudad de México
+                Propiedades en Tendencia en M&eacute;xico
               </h2>
               <p className="text-gray-600 mt-1">
-                Vistas y guardadas más frecuentemente en las últimas 24 horas
+                Las propiedades m&aacute;s vistas y guardadas recientemente
               </p>
             </div>
             <div className="flex gap-2">
@@ -90,7 +135,7 @@ export default function Home() {
 
           {/* Property Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {sampleProperties.map((property) => (
+            {properties.map((property) => (
               <PropertyCard key={property.id} {...property} />
             ))}
           </div>

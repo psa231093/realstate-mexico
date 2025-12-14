@@ -17,7 +17,13 @@
       "Bash(npm ls:*)",
       "Bash(if exist .next rmdir /s /q .next)",
       "Bash(git init:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git remote add:*)",
+      "Bash(git branch:*)",
+      "Bash(git push:*)",
+      "Bash(if exist .nextdevlock del /f .nextdevlock)",
+      "Bash(npx prisma db push:*)"
     ],
     "deny": [],
     "ask": []
