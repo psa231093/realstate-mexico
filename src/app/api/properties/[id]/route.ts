@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 
 interface RouteParams {
@@ -10,33 +9,31 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
+    const supabase = await createClient();
 
-    const property = await prisma.property.findUnique({
-      where: { id },
-      include: {
-        images: {
-          orderBy: { order: "asc" },
-        },
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            avatarUrl: true,
-            sellerType: true,
-          },
-        },
-        _count: {
-          select: {
-            favorites: true,
-            inquiries: true,
-          },
-        },
-      },
-    });
+    const { data: property, error } = await supabase
+      .from("Property")
+      .select(`
+        *,
+        PropertyImage (
+          id,
+          url,
+          alt,
+          order
+        ),
+        Profile:ownerId (
+          id,
+          name,
+          email,
+          phone,
+          avatarUrl,
+          sellerType
+        )
+      `)
+      .eq("id", id)
+      .single();
 
-    if (!property) {
+    if (error || !property) {
       return NextResponse.json(
         { error: "Property not found" },
         { status: 404 }
@@ -44,10 +41,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // Increment view count
-    await prisma.property.update({
-      where: { id },
-      data: { views: { increment: 1 } },
-    });
+    await supabase
+      .from("Property")
+      .update({ views: (property.views || 0) + 1 })
+      .eq("id", id);
 
     return NextResponse.json(property);
   } catch (error) {
@@ -74,10 +71,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if property exists and user owns it
-    const existingProperty = await prisma.property.findUnique({
-      where: { id },
-      select: { ownerId: true },
-    });
+    const { data: existingProperty } = await supabase
+      .from("Property")
+      .select("ownerId")
+      .eq("id", id)
+      .single();
 
     if (!existingProperty) {
       return NextResponse.json(
@@ -88,10 +86,11 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
 
     if (existingProperty.ownerId !== user.id) {
       // Check if user is admin
-      const profile = await prisma.profile.findUnique({
-        where: { id: user.id },
-        select: { role: true },
-      });
+      const { data: profile } = await supabase
+        .from("Profile")
+        .select("role")
+        .eq("id", user.id)
+        .single();
 
       if (profile?.role !== "ADMIN") {
         return NextResponse.json(
@@ -119,22 +118,33 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     }
 
-    const property = await prisma.property.update({
-      where: { id },
-      data: updateData,
-      include: {
-        images: {
-          orderBy: { order: "asc" },
-        },
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
-      },
-    });
+    const { data: property, error } = await supabase
+      .from("Property")
+      .update(updateData)
+      .eq("id", id)
+      .select(`
+        *,
+        PropertyImage (
+          id,
+          url,
+          alt,
+          order
+        ),
+        Profile:ownerId (
+          id,
+          name,
+          avatarUrl
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: "Failed to update property" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(property);
   } catch (error) {
@@ -161,10 +171,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if property exists and user owns it
-    const existingProperty = await prisma.property.findUnique({
-      where: { id },
-      select: { ownerId: true },
-    });
+    const { data: existingProperty } = await supabase
+      .from("Property")
+      .select("ownerId")
+      .eq("id", id)
+      .single();
 
     if (!existingProperty) {
       return NextResponse.json(
@@ -175,10 +186,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     if (existingProperty.ownerId !== user.id) {
       // Check if user is admin
-      const profile = await prisma.profile.findUnique({
-        where: { id: user.id },
-        select: { role: true },
-      });
+      const { data: profile } = await supabase
+        .from("Profile")
+        .select("role")
+        .eq("id", user.id)
+        .single();
 
       if (profile?.role !== "ADMIN") {
         return NextResponse.json(
@@ -189,10 +201,18 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Soft delete by setting active to false
-    await prisma.property.update({
-      where: { id },
-      data: { active: false },
-    });
+    const { error } = await supabase
+      .from("Property")
+      .update({ active: false })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: "Failed to delete property" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ success: true });
   } catch (error) {

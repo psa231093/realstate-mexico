@@ -3,7 +3,7 @@ import { PropertyCard } from "@/components/property/PropertyCard";
 import { BuyAbilitySection } from "@/components/search/BuyAbilitySection";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { prisma } from "@/lib/prisma";
+import { createClient } from "@/lib/supabase/server";
 
 // Fallback sample data for when database is empty
 const fallbackProperties = [
@@ -63,24 +63,41 @@ const fallbackProperties = [
 
 async function getProperties() {
   try {
-    const properties = await prisma.property.findMany({
-      where: {
-        active: true,
-      },
-      orderBy: [
-        { featured: "desc" },
-        { createdAt: "desc" },
-      ],
-      take: 8,
-      include: {
-        images: {
-          orderBy: { order: "asc" },
-          take: 1,
-        },
-      },
-    });
+    const supabase = await createClient();
 
-    if (properties.length === 0) {
+    const { data: properties, error } = await supabase
+      .from("Property")
+      .select(`
+        id,
+        slug,
+        title,
+        price,
+        bedrooms,
+        bathrooms,
+        areaTotal,
+        mainImageUrl,
+        colonia,
+        municipality,
+        state,
+        status,
+        featured,
+        PropertyImage (
+          url
+        )
+      `)
+      .eq("active", true)
+      .order("featured", { ascending: false })
+      .order("createdAt", { ascending: false })
+      .limit(8);
+
+    if (error) {
+      console.error("Supabase error:", JSON.stringify(error, null, 2));
+      console.error("Error code:", error.code);
+      console.error("Error message:", error.message);
+      return fallbackProperties;
+    }
+
+    if (!properties || properties.length === 0) {
       return fallbackProperties;
     }
 
@@ -92,7 +109,7 @@ async function getProperties() {
       bedrooms: property.bedrooms || undefined,
       bathrooms: property.bathrooms ? Number(property.bathrooms) : undefined,
       area: property.areaTotal ? Number(property.areaTotal) : undefined,
-      imageUrl: property.mainImageUrl || property.images[0]?.url || "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800",
+      imageUrl: property.mainImageUrl || property.PropertyImage?.[0]?.url || "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800",
       address: `${property.colonia}, ${property.municipality}, ${property.state}`,
       status: property.status,
       badge: property.featured ? "Destacada" : undefined,

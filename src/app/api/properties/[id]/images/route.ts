@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
 
 interface RouteParams {
@@ -21,10 +20,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if property exists and user owns it
-    const property = await prisma.property.findUnique({
-      where: { id },
-      select: { ownerId: true },
-    });
+    const { data: property } = await supabase
+      .from("Property")
+      .select("ownerId, mainImageUrl")
+      .eq("id", id)
+      .single();
 
     if (!property) {
       return NextResponse.json(
@@ -51,38 +51,42 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get current max order
-    const maxOrderResult = await prisma.propertyImage.aggregate({
-      where: { propertyId: id },
-      _max: { order: true },
-    });
-    let currentOrder = (maxOrderResult._max.order ?? -1) + 1;
+    const { data: existingImages } = await supabase
+      .from("PropertyImage")
+      .select("order")
+      .eq("propertyId", id)
+      .order("order", { ascending: false })
+      .limit(1);
+
+    let currentOrder = (existingImages?.[0]?.order ?? -1) + 1;
 
     // Create image records
-    const createdImages = await Promise.all(
-      images.map(async (image: { url: string; alt?: string }) => {
-        const propertyImage = await prisma.propertyImage.create({
-          data: {
-            url: image.url,
-            alt: image.alt || null,
-            order: currentOrder++,
-            propertyId: id,
-          },
-        });
-        return propertyImage;
-      })
-    );
+    const imagesToInsert = images.map((image: { url: string; alt?: string }) => ({
+      url: image.url,
+      alt: image.alt || null,
+      order: currentOrder++,
+      propertyId: id,
+    }));
+
+    const { data: createdImages, error } = await supabase
+      .from("PropertyImage")
+      .insert(imagesToInsert)
+      .select();
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: "Failed to add images" },
+        { status: 500 }
+      );
+    }
 
     // Set main image if not set
-    const propertyData = await prisma.property.findUnique({
-      where: { id },
-      select: { mainImageUrl: true },
-    });
-
-    if (!propertyData?.mainImageUrl && createdImages.length > 0) {
-      await prisma.property.update({
-        where: { id },
-        data: { mainImageUrl: createdImages[0].url },
-      });
+    if (!property.mainImageUrl && createdImages && createdImages.length > 0) {
+      await supabase
+        .from("Property")
+        .update({ mainImageUrl: createdImages[0].url })
+        .eq("id", id);
     }
 
     return NextResponse.json(createdImages, { status: 201 });
@@ -110,10 +114,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Check if property exists and user owns it
-    const property = await prisma.property.findUnique({
-      where: { id },
-      select: { ownerId: true, mainImageUrl: true },
-    });
+    const { data: property } = await supabase
+      .from("Property")
+      .select("ownerId, mainImageUrl")
+      .eq("id", id)
+      .single();
 
     if (!property) {
       return NextResponse.json(
@@ -140,9 +145,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Get image to delete
-    const imageToDelete = await prisma.propertyImage.findUnique({
-      where: { id: imageId },
-    });
+    const { data: imageToDelete } = await supabase
+      .from("PropertyImage")
+      .select("id, url, propertyId")
+      .eq("id", imageId)
+      .single();
 
     if (!imageToDelete || imageToDelete.propertyId !== id) {
       return NextResponse.json(
@@ -152,21 +159,33 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // Delete from database
-    await prisma.propertyImage.delete({
-      where: { id: imageId },
-    });
+    const { error } = await supabase
+      .from("PropertyImage")
+      .delete()
+      .eq("id", imageId);
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: "Failed to delete image" },
+        { status: 500 }
+      );
+    }
 
     // If this was the main image, set new main image
     if (property.mainImageUrl === imageToDelete.url) {
-      const nextImage = await prisma.propertyImage.findFirst({
-        where: { propertyId: id },
-        orderBy: { order: "asc" },
-      });
+      const { data: nextImage } = await supabase
+        .from("PropertyImage")
+        .select("url")
+        .eq("propertyId", id)
+        .order("order", { ascending: true })
+        .limit(1)
+        .single();
 
-      await prisma.property.update({
-        where: { id },
-        data: { mainImageUrl: nextImage?.url || null },
-      });
+      await supabase
+        .from("Property")
+        .update({ mainImageUrl: nextImage?.url || null })
+        .eq("id", id);
     }
 
     return NextResponse.json({ success: true });

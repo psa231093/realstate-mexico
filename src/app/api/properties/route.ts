@@ -1,17 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { createClient } from "@/lib/supabase/server";
-import { Prisma } from "@prisma/client";
 
 // GET /api/properties - List properties with filters and pagination
 export async function GET(request: NextRequest) {
   try {
+    const supabase = await createClient();
     const { searchParams } = new URL(request.url);
 
     // Pagination
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "12");
-    const skip = (page - 1) * limit;
+    const offset = (page - 1) * limit;
 
     // Filters
     const type = searchParams.get("type");
@@ -28,108 +27,69 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search");
     const ownerId = searchParams.get("ownerId");
 
-    // Build where clause
-    const where: Prisma.PropertyWhereInput = {
-      active: true,
-    };
-
-    if (type) {
-      where.type = type as Prisma.EnumPropertyTypeFilter;
-    }
-
-    if (status) {
-      where.status = status as Prisma.EnumPropertyStatusFilter;
-    }
-
-    if (state) {
-      where.state = state;
-    }
-
-    if (municipality) {
-      where.municipality = municipality;
-    }
-
-    if (minPrice || maxPrice) {
-      where.price = {};
-      if (minPrice) where.price.gte = parseFloat(minPrice);
-      if (maxPrice) where.price.lte = parseFloat(maxPrice);
-    }
-
-    if (minBedrooms || maxBedrooms) {
-      where.bedrooms = {};
-      if (minBedrooms) where.bedrooms.gte = parseInt(minBedrooms);
-      if (maxBedrooms) where.bedrooms.lte = parseInt(maxBedrooms);
-    }
-
-    if (minBathrooms || maxBathrooms) {
-      where.bathrooms = {};
-      if (minBathrooms) where.bathrooms.gte = parseFloat(minBathrooms);
-      if (maxBathrooms) where.bathrooms.lte = parseFloat(maxBathrooms);
-    }
-
-    if (featured === "true") {
-      where.featured = true;
-    }
-
-    if (ownerId) {
-      where.ownerId = ownerId;
-    }
-
-    if (search) {
-      where.OR = [
-        { title: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-        { colonia: { contains: search, mode: "insensitive" } },
-        { municipality: { contains: search, mode: "insensitive" } },
-        { state: { contains: search, mode: "insensitive" } },
-      ];
-    }
-
     // Sorting
     const sortBy = searchParams.get("sortBy") || "createdAt";
     const sortOrder = searchParams.get("sortOrder") || "desc";
 
-    const orderBy: Prisma.PropertyOrderByWithRelationInput = {
-      [sortBy]: sortOrder,
-    };
+    // Build query
+    let query = supabase
+      .from("Property")
+      .select(`
+        *,
+        PropertyImage (
+          id,
+          url,
+          alt,
+          order
+        ),
+        Profile:ownerId (
+          id,
+          name,
+          avatarUrl,
+          sellerType
+        )
+      `, { count: 'exact' })
+      .eq("active", true);
 
-    // Execute query
-    const [properties, total] = await Promise.all([
-      prisma.property.findMany({
-        where,
-        orderBy,
-        skip,
-        take: limit,
-        include: {
-          images: {
-            orderBy: { order: "asc" },
-            take: 5,
-          },
-          owner: {
-            select: {
-              id: true,
-              name: true,
-              avatarUrl: true,
-              sellerType: true,
-            },
-          },
-          _count: {
-            select: {
-              favorites: true,
-            },
-          },
-        },
-      }),
-      prisma.property.count({ where }),
-    ]);
+    // Apply filters
+    if (type) query = query.eq("type", type);
+    if (status) query = query.eq("status", status);
+    if (state) query = query.eq("state", state);
+    if (municipality) query = query.eq("municipality", municipality);
+    if (minPrice) query = query.gte("price", parseFloat(minPrice));
+    if (maxPrice) query = query.lte("price", parseFloat(maxPrice));
+    if (minBedrooms) query = query.gte("bedrooms", parseInt(minBedrooms));
+    if (maxBedrooms) query = query.lte("bedrooms", parseInt(maxBedrooms));
+    if (minBathrooms) query = query.gte("bathrooms", parseFloat(minBathrooms));
+    if (maxBathrooms) query = query.lte("bathrooms", parseFloat(maxBathrooms));
+    if (featured === "true") query = query.eq("featured", true);
+    if (ownerId) query = query.eq("ownerId", ownerId);
+    if (search) {
+      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,colonia.ilike.%${search}%,municipality.ilike.%${search}%,state.ilike.%${search}%`);
+    }
+
+    // Apply sorting and pagination
+    query = query
+      .order(sortBy, { ascending: sortOrder === "asc" })
+      .range(offset, offset + limit - 1);
+
+    const { data: properties, error, count } = await query;
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: "Failed to fetch properties" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
-      properties,
+      properties: properties || [],
       pagination: {
         page,
         limit,
-        total,
-        totalPages: Math.ceil(total / limit),
+        total: count || 0,
+        totalPages: Math.ceil((count || 0) / limit),
       },
     });
   } catch (error) {
@@ -183,21 +143,26 @@ export async function POST(request: NextRequest) {
     const slug = `${baseSlug}-${Date.now().toString(36)}`;
 
     // Ensure profile exists for this user
-    await prisma.profile.upsert({
-      where: { id: user.id },
-      update: {},
-      create: {
+    const { data: existingProfile } = await supabase
+      .from("Profile")
+      .select("id")
+      .eq("id", user.id)
+      .single();
+
+    if (!existingProfile) {
+      await supabase.from("Profile").insert({
         id: user.id,
         email: user.email!,
         name: user.user_metadata?.full_name || user.user_metadata?.name,
         avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture,
         sellerType: body.sellerType,
-      },
-    });
+      });
+    }
 
     // Create property
-    const property = await prisma.property.create({
-      data: {
+    const { data: property, error } = await supabase
+      .from("Property")
+      .insert({
         title: body.title,
         description: body.description,
         type: body.type,
@@ -223,20 +188,32 @@ export async function POST(request: NextRequest) {
         slug,
         featured: false,
         active: true,
-        publishedAt: new Date(),
+        publishedAt: new Date().toISOString(),
         ownerId: user.id,
-      },
-      include: {
-        images: true,
-        owner: {
-          select: {
-            id: true,
-            name: true,
-            avatarUrl: true,
-          },
-        },
-      },
-    });
+      })
+      .select(`
+        *,
+        PropertyImage (
+          id,
+          url,
+          alt,
+          order
+        ),
+        Profile:ownerId (
+          id,
+          name,
+          avatarUrl
+        )
+      `)
+      .single();
+
+    if (error) {
+      console.error("Supabase error:", error);
+      return NextResponse.json(
+        { error: "Failed to create property" },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json(property, { status: 201 });
   } catch (error) {
