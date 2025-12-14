@@ -5,9 +5,10 @@ import { PropertyCardCompact } from "@/components/property/PropertyCardCompact";
 import { PropertyDetailModal } from "@/components/property/PropertyDetailModal";
 import { PropertyMap } from "@/components/map/PropertyMap";
 import { FiltersSidebar } from "@/components/search/FiltersSidebar";
+import { PropertySearchBar, SearchFilters } from "@/components/search/PropertySearchBar";
 import { Button } from "@/components/ui/button";
 import { LayoutGrid, Map as MapIcon, ChevronDown, SlidersHorizontal, X, Loader2 } from "lucide-react";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 
 interface Property {
@@ -95,6 +96,7 @@ export default function PropiedadesPage() {
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
+  const [searchBarFilters, setSearchBarFilters] = useState<SearchFilters | null>(null);
   const [filters, setFilters] = useState<{
     priceMin: number | null;
     priceMax: number | null;
@@ -114,6 +116,12 @@ export default function PropiedadesPage() {
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get("q");
   const statusParam = searchParams.get("status");
+
+  // Handle search bar filter changes
+  const handleSearchBarFiltersChange = useCallback((newFilters: SearchFilters) => {
+    setSearchBarFilters(newFilters);
+  }, []);
+
 
   // Fetch properties from API
   useEffect(() => {
@@ -174,15 +182,20 @@ export default function PropiedadesPage() {
     ? properties.find((p) => p.id === selectedPropertyId)
     : null;
 
-  // Filter properties based on active filters
+  // Filter properties based on active filters (combining sidebar and search bar)
   const filteredProperties = useMemo(() => {
     return properties.filter((property) => {
-      // Price filter
-      if (filters.priceMin && property.price < filters.priceMin) return false;
-      if (filters.priceMax && property.price > filters.priceMax) return false;
+      // Search bar price filter (takes priority)
+      const effectivePriceMin = searchBarFilters?.priceMin ?? filters.priceMin;
+      const effectivePriceMax = searchBarFilters?.priceMax ?? filters.priceMax;
 
-      // Bedrooms filter
-      if (filters.bedrooms.length > 0 && property.bedrooms) {
+      if (effectivePriceMin && property.price < effectivePriceMin) return false;
+      if (effectivePriceMax && property.price > effectivePriceMax) return false;
+
+      // Search bar bedrooms filter
+      if (searchBarFilters?.bedrooms && property.bedrooms) {
+        if (property.bedrooms < searchBarFilters.bedrooms) return false;
+      } else if (filters.bedrooms.length > 0 && property.bedrooms) {
         const hasMatch = filters.bedrooms.some((bed: number) => {
           if (bed === 5) return property.bedrooms! >= 5;
           return property.bedrooms === bed;
@@ -190,8 +203,10 @@ export default function PropiedadesPage() {
         if (!hasMatch) return false;
       }
 
-      // Bathrooms filter
-      if (filters.bathrooms.length > 0 && property.bathrooms) {
+      // Search bar bathrooms filter
+      if (searchBarFilters?.bathrooms && property.bathrooms) {
+        if (property.bathrooms < searchBarFilters.bathrooms) return false;
+      } else if (filters.bathrooms.length > 0 && property.bathrooms) {
         const hasMatch = filters.bathrooms.some((bath: number) => {
           if (bath === 4) return property.bathrooms! >= 4;
           return property.bathrooms! >= bath && property.bathrooms! < bath + 1;
@@ -204,9 +219,18 @@ export default function PropiedadesPage() {
         return false;
       }
 
+      // Location filter from search bar
+      if (searchBarFilters?.location) {
+        const locationLower = searchBarFilters.location.toLowerCase();
+        if (!property.address.toLowerCase().includes(locationLower) &&
+            !property.title.toLowerCase().includes(locationLower)) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [properties, filters]);
+  }, [properties, filters, searchBarFilters]);
 
   // Get page title based on status
   const pageTitle = statusParam === "RENTA" ? "Propiedades en Renta" : "Propiedades en Venta";
@@ -224,14 +248,17 @@ export default function PropiedadesPage() {
 
   return (
     <div className="h-[calc(100vh-64px)] flex flex-col bg-background">
-      {/* Top Bar with Filters Toggle */}
-      <div className="bg-card border-b border-border px-4 py-3 flex items-center justify-between">
+      {/* Search Bar */}
+      <PropertySearchBar
+        initialStatus={statusParam === "RENTA" ? "RENTA" : "VENTA"}
+        onFiltersChange={handleSearchBarFiltersChange}
+      />
+
+      {/* Secondary Bar with View Toggle and Results Count */}
+      <div className="bg-card border-b border-border px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-lg font-semibold text-foreground">
-            {searchQuery ? `Resultados para "${searchQuery}"` : pageTitle}
-          </h1>
           <span className="text-sm text-muted-foreground">
-            {filteredProperties.length} propiedades
+            {filteredProperties.length} propiedades encontradas
           </span>
         </div>
 
@@ -244,7 +271,7 @@ export default function PropiedadesPage() {
               size="sm"
               className="gap-1"
             >
-              <span className="text-sm">M&aacute;s recientes</span>
+              <span className="text-sm">Mas recientes</span>
               <ChevronDown className="h-4 w-4" />
             </Button>
           </div>
@@ -271,11 +298,11 @@ export default function PropiedadesPage() {
             </Button>
           </div>
 
-          {/* Filters Button */}
+          {/* Filters Button (Mobile) */}
           <Button
             variant="outline"
             size="sm"
-            className="gap-1"
+            className="gap-1 lg:hidden"
             onClick={() => setShowFilters(!showFilters)}
           >
             <SlidersHorizontal className="h-4 w-4" />
