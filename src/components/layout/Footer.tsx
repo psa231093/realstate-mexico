@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Home } from "lucide-react";
+import Image from "next/image";
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -10,12 +10,17 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Company Info */}
           <div className="space-y-4">
-            <div className="flex items-center space-x-2">
-              <Home className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold text-foreground">Bienes Raíces México</span>
-            </div>
+            <Link href="/" className="inline-block">
+              <Image
+                src="/logo.webp"
+                alt="Urbanify"
+                width={120}
+                height={35}
+                className="h-7 w-auto"
+              />
+            </Link>
             <p className="text-sm text-muted-foreground">
-              Tu plataforma confiable para encontrar el hogar ideal en México.
+              Tu plataforma confiable para encontrar el hogar ideal en Mexico.
             </p>
           </div>
 
@@ -130,7 +135,7 @@ export function Footer() {
         </div>
 
         <div className="mt-12 pt-8 border-t border-border text-center text-sm text-muted-foreground">
-          <p>&copy; {currentYear} Bienes Raíces México. Todos los derechos reservados.</p>
+          <p>&copy; {currentYear} Urbanify. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

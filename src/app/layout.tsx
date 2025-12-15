@@ -9,8 +9,8 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Bienes Raíces México - Encuentra tu hogar ideal",
-  description: "Plataforma de bienes raíces para el mercado mexicano. Encuentra casas, departamentos y propiedades en venta y renta en todo México.",
+  title: "Urbanify - Encuentra tu hogar ideal en Mexico",
+  description: "Urbanify es tu plataforma de bienes raices en Mexico. Encuentra casas, departamentos y propiedades en venta y renta en todo el pais.",
 };
 
 export default function RootLayout({

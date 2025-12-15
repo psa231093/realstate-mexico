@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Home, Search, Heart } from "lucide-react";
+import Image from "next/image";
+import { Search, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { UserMenu } from "@/components/layout/UserMenu";
@@ -27,9 +28,15 @@ export function Navbar() {
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             {/* Logo */}
-            <Link href="/" className="flex items-center space-x-2">
-              <Home className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold text-foreground">Bienes Raices Mexico</span>
+            <Link href="/" className="flex items-center">
+              <Image
+                src="/logo.webp"
+                alt="Urbanify"
+                width={140}
+                height={40}
+                className="h-8 w-auto"
+                priority
+              />
             </Link>
 
             {/* Navigation Links - Desktop */}
