@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -77,12 +78,14 @@ export function BuyAbilitySection() {
             </div>
 
             {/* CTA Button */}
-            <Button
-              size="lg"
-              className="w-full font-semibold text-base py-6 rounded-lg"
-            >
-              Empecemos
-            </Button>
+            <Link href="/calculadora">
+              <Button
+                size="lg"
+                className="w-full font-semibold text-base py-6 rounded-lg"
+              >
+                Empecemos
+              </Button>
+            </Link>
           </div>
 
           {/* Property Cards Grid */}
