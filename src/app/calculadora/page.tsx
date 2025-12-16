@@ -1,22 +1,28 @@
 import { Metadata } from "next";
 import { AffordabilityCalculator } from "@/components/calculadora/AffordabilityCalculator";
+import { CalculatorNav } from "@/components/calculadora/CalculatorNav";
 
 export const metadata: Metadata = {
-  title: "Calculadora de Capacidad de Compra | Urbanify",
+  title: "Calculadoras Inmobiliarias | Urbanify",
   description:
-    "Descubre cuanto puedes pagar por tu nuevo hogar. Calcula tu capacidad de compra basada en tus ingresos, deudas y el enganche disponible.",
+    "Calculadoras para compradores e inversionistas inmobiliarios en Mexico. Capacidad de compra, credito INFONAVIT, y rendimiento de inversiones.",
   keywords: [
     "calculadora hipoteca",
     "capacidad de compra",
     "credito hipotecario mexico",
     "cuanto puedo pagar casa",
     "simulador hipoteca",
+    "calculadora infonavit",
+    "inversion inmobiliaria",
   ],
 };
 
 export default function CalculadoraPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50/50 to-background dark:from-background">
+      {/* Calculator Navigation */}
+      <CalculatorNav active="capacidad" />
+
       {/* Hero Section */}
       <section className="py-12 md:py-16">
         <div className="container mx-auto px-4">

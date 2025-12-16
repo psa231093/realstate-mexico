@@ -30,7 +30,8 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(base64Data, "base64");
 
     // Compress using TinyPNG
-    const compressedBuffer = await tinify.fromBuffer(buffer).toBuffer();
+    const compressedData = await tinify.fromBuffer(buffer).toBuffer();
+    const compressedBuffer = Buffer.from(compressedData);
 
     // Convert back to base64
     const compressedBase64 = `data:image/jpeg;base64,${compressedBuffer.toString("base64")}`;

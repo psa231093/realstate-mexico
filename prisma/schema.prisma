@@ -47,10 +47,13 @@ model Profile {
   updatedAt     DateTime  @updatedAt
 
   // Relations
-  properties    Property[]
-  favorites     Favorite[]
-  savedSearches SavedSearch[]
-  inquiriesSent Inquiry[]    @relation("InquirySender")
+  properties          Property[]
+  favorites           Favorite[]
+  savedSearches       SavedSearch[]
+  inquiriesSent       Inquiry[]       @relation("InquirySender")
+  buyerConversations  Conversation[]  @relation("BuyerConversations")
+  sellerConversations Conversation[]  @relation("SellerConversations")
+  messagesSent        Message[]       @relation("MessagesSent")
 
   @@index([email])
 }
@@ -108,6 +111,7 @@ model Property {
   owner         Profile        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   favorites     Favorite[]
   inquiries     Inquiry[]
+  conversations Conversation[]
 
   @@index([type, status, state, municipality])
   @@index([price, bedrooms, bathrooms])
@@ -182,6 +186,58 @@ model Inquiry {
   updatedAt   DateTime @updatedAt
 
   @@index([propertyId])
+  @@index([senderId])
+  @@index([createdAt])
+}
+
+// Conversation between two users about a property
+model Conversation {
+  id              String    @id @default(cuid())
+
+  // Property context (required)
+  propertyId      String
+  property        Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+
+  // Participants
+  buyerId         String    // User inquiring about property
+  buyer           Profile   @relation("BuyerConversations", fields: [buyerId], references: [id], onDelete: Cascade)
+  sellerId        String    // Property owner
+  seller          Profile   @relation("SellerConversations", fields: [sellerId], references: [id], onDelete: Cascade)
+
+  // Metadata
+  lastMessageAt   DateTime?
+  lastMessageText String?   @db.VarChar(100)
+
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  messages        Message[]
+
+  @@unique([propertyId, buyerId, sellerId])
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([lastMessageAt])
+}
+
+// Individual messages within a conversation
+model Message {
+  id              String       @id @default(cuid())
+
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId        String
+  sender          Profile      @relation("MessagesSent", fields: [senderId], references: [id], onDelete: Cascade)
+
+  content         String       @db.Text
+
+  // Read tracking
+  readAt          DateTime?
+
+  createdAt       DateTime     @default(now())
+
+  @@index([conversationId])
   @@index([senderId])
   @@index([createdAt])
 }

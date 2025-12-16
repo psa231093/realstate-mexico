@@ -5,6 +5,8 @@ import { Heart, Bed, Bath, Maximize } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatMXN } from "@/lib/utils";
+import { WhatsAppButton } from "@/components/ui/WhatsAppButton";
+import { PricePerM2Badge } from "./PricePerM2Badge";
 
 interface PropertyCardProps {
   id: string;
@@ -18,6 +20,7 @@ interface PropertyCardProps {
   address: string;
   status: string;
   badge?: string;
+  contactPhone?: string;
   onClick?: () => void;
 }
 
@@ -33,6 +36,7 @@ export function PropertyCard({
   address,
   status,
   badge,
+  contactPhone,
   onClick,
 }: PropertyCardProps) {
   return (
@@ -68,6 +72,21 @@ export function PropertyCard({
           >
             <Heart className="h-4 w-4" />
           </Button>
+
+          {/* WhatsApp Button */}
+          <div className="absolute bottom-3 right-3">
+            <WhatsAppButton
+              property={{
+                propertyTitle: title,
+                propertyPrice: price,
+                propertyAddress: address,
+                contactPhone,
+              }}
+              size="icon"
+              showText={false}
+              className="h-9 w-9 rounded-full shadow-md"
+            />
+          </div>
         </div>
 
         {/* Content */}
@@ -77,6 +96,9 @@ export function PropertyCard({
             <p className="text-2xl font-bold text-card-foreground">
               {formatMXN(price)}
             </p>
+            {area && (
+              <PricePerM2Badge price={price} area={area} size="sm" />
+            )}
           </div>
 
           {/* Property Details */}

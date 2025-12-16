@@ -31,7 +31,14 @@
       "Bash(if exist \"C:\\Users\\pablo\\OneDrive\\Desktop\\realestate-mexico\\.next\" rmdir /s /q \"C:\\Users\\pablo\\OneDrive\\Desktop\\realestate-mexico\\.next\")",
       "Bash(git checkout:*)",
       "Bash(git stash:*)",
-      "Bash(npx shadcn:*)"
+      "Bash(npx shadcn:*)",
+      "Bash(curl:*)",
+      "Bash(ls:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx tsc:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(npx dotenv:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []

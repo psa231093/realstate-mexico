@@ -8,17 +8,17 @@ import { X } from "lucide-react";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  sellerType: string;
-  sellerTitle: string;
-  redirectPath: string;
+  sellerType?: string;
+  sellerTitle?: string;
+  redirectPath?: string;
 }
 
 export function AuthModal({
   isOpen,
   onClose,
-  sellerType,
-  sellerTitle,
-  redirectPath,
+  sellerType = "",
+  sellerTitle = "",
+  redirectPath = "/dashboard",
 }: AuthModalProps) {
   const { signInWithGoogle } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -28,7 +28,9 @@ export function AuthModal({
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      const fullRedirectPath = `${redirectPath}?sellerType=${sellerType}`;
+      const fullRedirectPath = sellerType
+        ? `${redirectPath}?sellerType=${sellerType}`
+        : redirectPath;
       await signInWithGoogle(fullRedirectPath);
     } catch (error) {
       console.error("Error signing in:", error);
@@ -80,8 +82,14 @@ export function AuthModal({
 
           {/* Description */}
           <p className="text-muted-foreground mb-8">
-            Reg&iacute;strate como <span className="font-semibold text-card-foreground">{sellerTitle}</span>{" "}
-            para continuar con tu publicaci&oacute;n
+            {sellerTitle ? (
+              <>
+                Reg&iacute;strate como <span className="font-semibold text-card-foreground">{sellerTitle}</span>{" "}
+                para continuar con tu publicaci&oacute;n
+              </>
+            ) : (
+              <>Inicia sesi&oacute;n para acceder a todas las funciones</>
+            )}
           </p>
 
           {/* Google Sign In Button */}

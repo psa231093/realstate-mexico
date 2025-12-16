@@ -8,8 +8,17 @@ import { X } from "lucide-react";
 import { MEXICAN_STATES } from "@/constants/mexican-states";
 import { PROPERTY_TYPE_LABELS } from "@/constants/property-types";
 
+interface Filters {
+  priceMin: number | null;
+  priceMax: number | null;
+  bedrooms: number[];
+  bathrooms: number[];
+  types: string[];
+  state: string | null;
+}
+
 interface FiltersSidebarProps {
-  onFiltersChange?: (filters: any) => void;
+  onFiltersChange?: (filters: Filters) => void;
 }
 
 export function FiltersSidebar({ onFiltersChange }: FiltersSidebarProps) {
@@ -23,7 +32,7 @@ export function FiltersSidebar({ onFiltersChange }: FiltersSidebarProps) {
   const bedroomOptions = [1, 2, 3, 4, 5];
   const bathroomOptions = [1, 2, 3, 4];
 
-  const updateFilters = (updates: Partial<typeof filters>) => {
+  const updateFilters = (updates: Partial<Filters>) => {
     const newFilters = {
       priceMin: priceMin ? parseFloat(priceMin) : null,
       priceMax: priceMax ? parseFloat(priceMax) : null,

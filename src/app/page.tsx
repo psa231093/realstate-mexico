@@ -1,6 +1,7 @@
 import { SearchHero } from "@/components/search/SearchHero";
 import { PropertyCard } from "@/components/property/PropertyCard";
 import { BuyAbilitySection } from "@/components/search/BuyAbilitySection";
+import { SmartToolsSection } from "@/components/home/SmartToolsSection";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/server";
@@ -133,7 +134,7 @@ export default async function Home() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-2xl font-bold text-foreground">
+              <h2 className="text-2xl md:text-3xl font-bold text-foreground">
                 Propiedades en Tendencia en M&eacute;xico
               </h2>
               <p className="text-muted-foreground mt-1">
@@ -158,6 +159,9 @@ export default async function Home() {
           </div>
         </div>
       </section>
+
+      {/* Smart Tools Section */}
+      <SmartToolsSection />
 
       {/* BuyAbility Section */}
       <BuyAbilitySection />

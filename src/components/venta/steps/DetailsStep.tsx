@@ -30,7 +30,7 @@ export function DetailsStep() {
           status: data.status,
           bedrooms: data.bedrooms,
           bathrooms: data.bathrooms,
-          area: data.areaTotal,
+          area: data.area,
           colonia: data.colonia,
           municipality: data.municipality,
           state: data.state,

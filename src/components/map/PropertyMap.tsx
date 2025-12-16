@@ -15,8 +15,9 @@ interface Property {
   address: string;
   status: string;
   badge?: string;
-  latitude: number;
-  longitude: number;
+  contactPhone?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface PropertyMapProps {
@@ -41,7 +42,8 @@ export function PropertyMap({
 
     // Dynamically import mapbox-gl
     import("mapbox-gl").then((mapboxgl) => {
-      // Import CSS
+      // Import CSS (ignore type error for CSS module)
+      // @ts-ignore
       import("mapbox-gl/dist/mapbox-gl.css");
 
       const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -84,8 +86,13 @@ export function PropertyMap({
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
 
-      // Add new markers
+      // Add new markers (only for properties with valid coordinates)
       properties.forEach((property) => {
+        // Skip properties without valid coordinates
+        if (property.latitude === undefined || property.longitude === undefined) {
+          return;
+        }
+
         // Create custom marker element
         const el = document.createElement("div");
         el.className = "property-marker";

@@ -39,8 +39,8 @@ interface Property {
   address: string;
   status: string;
   badge?: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
   description?: string;
   yearBuilt?: number;
   parkingSpaces?: number;

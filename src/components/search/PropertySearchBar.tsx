@@ -5,10 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Search, X, ChevronDown, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface PropertySearchBarProps {
   initialStatus?: "VENTA" | "RENTA";
   onFiltersChange?: (filters: SearchFilters) => void;
+  onSaveSearch?: () => void;
 }
 
 export interface SearchFilters {
@@ -76,9 +78,11 @@ const PROPERTY_TYPES = [
 export function PropertySearchBar({
   initialStatus = "VENTA",
   onFiltersChange,
+  onSaveSearch,
 }: PropertySearchBarProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { user } = useAuth();
 
   const [location, setLocation] = useState(searchParams.get("q") || "");
   const [status, setStatus] = useState<"VENTA" | "RENTA">(

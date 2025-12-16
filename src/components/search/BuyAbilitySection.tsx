@@ -27,10 +27,10 @@ export function BuyAbilitySection() {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-foreground mb-2">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
             Encuentra casas que puedas pagar con CapacidadDeCompra™
           </h2>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground mt-1">
             Responde algunas preguntas. Destacaremos las casas para las que probablemente califiques.
           </p>
         </div>

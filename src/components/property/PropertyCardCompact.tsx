@@ -5,6 +5,8 @@ import { Heart, Bed, Bath, Maximize } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatMXN } from "@/lib/utils";
+import { WhatsAppButton } from "@/components/ui/WhatsAppButton";
+import { PricePerM2Badge } from "./PricePerM2Badge";
 
 interface PropertyCardCompactProps {
   id: string;
@@ -18,6 +20,7 @@ interface PropertyCardCompactProps {
   address: string;
   status: string;
   badge?: string;
+  contactPhone?: string;
   isHovered?: boolean;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
@@ -36,6 +39,7 @@ export function PropertyCardCompact({
   address,
   status,
   badge,
+  contactPhone,
   isHovered,
   onMouseEnter,
   onMouseLeave,
@@ -79,6 +83,9 @@ export function PropertyCardCompact({
               <p className="text-lg font-bold text-card-foreground">
                 {formatMXN(price)}
               </p>
+              {area && (
+                <PricePerM2Badge price={price} area={area} size="sm" />
+              )}
 
               {/* Property Details */}
               <div className="flex items-center gap-2 text-xs text-muted-foreground mt-1">
@@ -106,8 +113,19 @@ export function PropertyCardCompact({
               <p className="text-xs text-muted-foreground/70 mt-1 truncate">{address}</p>
             </div>
 
-            {/* Favorite Button */}
-            <div className="flex justify-end mt-2">
+            {/* Action Buttons */}
+            <div className="flex justify-end gap-1 mt-2">
+              <WhatsAppButton
+                property={{
+                  propertyTitle: title,
+                  propertyPrice: price,
+                  propertyAddress: address,
+                  contactPhone,
+                }}
+                size="icon"
+                showText={false}
+                className="h-7 w-7 rounded-full"
+              />
               <Button
                 variant="ghost"
                 size="icon"
