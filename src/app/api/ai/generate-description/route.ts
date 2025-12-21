@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
+import { checkRateLimit, getClientIP, RATE_LIMITS, rateLimitHeaders } from "@/lib/rate-limit";
 
 interface PropertyData {
   type: string;
@@ -33,6 +34,20 @@ const STATUS_LABELS: Record<string, string> = {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - 10 requests per minute for AI features
+    const clientIP = getClientIP(request);
+    const rateLimitResult = checkRateLimit(`ai:${clientIP}`, RATE_LIMITS.ai);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Demasiadas solicitudes. Intenta de nuevo en unos minutos." },
+        {
+          status: 429,
+          headers: rateLimitHeaders(rateLimitResult)
+        }
+      );
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
 
     if (!apiKey) {

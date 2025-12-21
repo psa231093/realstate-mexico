@@ -1,263 +1,214 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Image from "next/image";
-import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { useState, useEffect, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EmptyState } from "@/components/dashboard/EmptyState";
-import { MessageSquare, Mail, Phone, Clock, ExternalLink } from "lucide-react";
+import { ConversationList, type Conversation } from "@/components/chat/ConversationList";
+import { ChatView, type Message } from "@/components/chat/ChatView";
+import { cn } from "@/lib/utils";
 
-interface Property {
-  id: string;
-  slug: string;
-  title: string;
-  mainImageUrl: string | null;
-}
-
-interface Inquiry {
-  id: string;
-  name: string;
-  email: string;
-  phone: string | null;
-  message: string;
-  status: string;
-  createdAt: string;
-  Property: Property;
-}
+// Poll interval for new messages (in milliseconds)
+const POLL_INTERVAL = 5000;
 
 export default function MessagesPage() {
-  const [receivedInquiries, setReceivedInquiries] = useState<Inquiry[]>([]);
-  const [sentInquiries, setSentInquiries] = useState<Inquiry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("received");
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
+  const [conversationDetails, setConversationDetails] = useState<(Conversation & { currentUserId: string }) | null>(null);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [activeTab, setActiveTab] = useState("conversations");
 
-  useEffect(() => {
-    fetchInquiries();
-  }, []);
-
-  const fetchInquiries = async () => {
+  // Fetch conversations
+  const fetchConversations = useCallback(async () => {
     try {
-      const [receivedRes, sentRes] = await Promise.all([
-        fetch("/api/inquiries?type=received"),
-        fetch("/api/inquiries?type=sent"),
-      ]);
-
-      if (receivedRes.ok) {
-        const data = await receivedRes.json();
-        setReceivedInquiries(data);
-      }
-
-      if (sentRes.ok) {
-        const data = await sentRes.json();
-        setSentInquiries(data);
+      const res = await fetch("/api/conversations");
+      if (res.ok) {
+        const data = await res.json();
+        setConversations(data);
       }
     } catch (error) {
-      console.error("Error fetching inquiries:", error);
+      console.error("Error fetching conversations:", error);
     } finally {
-      setIsLoading(false);
+      setIsLoadingConversations(false);
     }
-  };
+  }, []);
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffDays = Math.floor(diffMs / 86400000);
+  // Fetch messages for selected conversation
+  const fetchMessages = useCallback(async (conversationId: string, silent = false) => {
+    if (!silent) setIsLoadingMessages(true);
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}/messages`);
+      if (res.ok) {
+        const data = await res.json();
+        setMessages(data);
+      }
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+    } finally {
+      if (!silent) setIsLoadingMessages(false);
+    }
+  }, []);
 
-    if (diffDays === 0) {
-      return date.toLocaleTimeString("es-MX", {
-        hour: "2-digit",
-        minute: "2-digit",
-      });
-    } else if (diffDays === 1) {
-      return "Ayer";
-    } else if (diffDays < 7) {
-      return `Hace ${diffDays} dias`;
+  // Fetch conversation details
+  const fetchConversationDetails = useCallback(async (conversationId: string) => {
+    try {
+      const res = await fetch(`/api/conversations/${conversationId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setConversationDetails(data);
+      }
+    } catch (error) {
+      console.error("Error fetching conversation details:", error);
+    }
+  }, []);
+
+  // Initial load
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  // Load messages when conversation is selected
+  useEffect(() => {
+    if (selectedConversation) {
+      fetchMessages(selectedConversation.id);
+      fetchConversationDetails(selectedConversation.id);
     } else {
-      return date.toLocaleDateString("es-MX", {
-        month: "short",
-        day: "numeric",
+      setMessages([]);
+      setConversationDetails(null);
+    }
+  }, [selectedConversation, fetchMessages, fetchConversationDetails]);
+
+  // Poll for new messages
+  useEffect(() => {
+    if (!selectedConversation) return;
+
+    const interval = setInterval(() => {
+      fetchMessages(selectedConversation.id, true);
+      fetchConversations(); // Also refresh conversation list for unread counts
+    }, POLL_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [selectedConversation, fetchMessages, fetchConversations]);
+
+  // Handle conversation selection
+  const handleSelectConversation = (conversation: Conversation) => {
+    setSelectedConversation(conversation);
+    // On mobile, switch to chat view
+    if (window.innerWidth < 1024) {
+      setActiveTab("chat");
+    }
+  };
+
+  // Handle back button (mobile)
+  const handleBack = () => {
+    setSelectedConversation(null);
+    setActiveTab("conversations");
+  };
+
+  // Send message
+  const handleSendMessage = async (content: string) => {
+    if (!selectedConversation || isSending) return;
+
+    setIsSending(true);
+    try {
+      const res = await fetch(`/api/conversations/${selectedConversation.id}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content }),
       });
+
+      if (res.ok) {
+        const newMessage = await res.json();
+        setMessages((prev) => [...prev, newMessage]);
+        // Update conversation list to show new message preview
+        fetchConversations();
+      }
+    } catch (error) {
+      console.error("Error sending message:", error);
+    } finally {
+      setIsSending(false);
     }
   };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "NUEVO":
-        return <Badge variant="default">Nuevo</Badge>;
-      case "CONTACTADO":
-        return <Badge variant="secondary">Contactado</Badge>;
-      case "CERRADO":
-        return <Badge variant="outline">Cerrado</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  const InquiryCard = ({ inquiry, type }: { inquiry: Inquiry; type: "received" | "sent" }) => (
-    <div className="bg-card rounded-lg border border-border p-4">
-      <div className="flex gap-4">
-        {/* Property Image */}
-        <Link
-          href={`/propiedades/${inquiry.Property.slug}`}
-          className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden"
-        >
-          <Image
-            src={inquiry.Property.mainImageUrl || "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=200"}
-            alt={inquiry.Property.title}
-            fill
-            className="object-cover"
-          />
-        </Link>
-
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <div className="flex items-center gap-2 mb-1">
-                {getStatusBadge(inquiry.status)}
-                <span className="text-xs text-muted-foreground flex items-center gap-1">
-                  <Clock className="h-3 w-3" />
-                  {formatDate(inquiry.createdAt)}
-                </span>
-              </div>
-              <Link
-                href={`/propiedades/${inquiry.Property.slug}`}
-                className="font-medium text-foreground hover:text-primary transition-colors line-clamp-1"
-              >
-                {inquiry.Property.title}
-              </Link>
-            </div>
-            <Link
-              href={`/propiedades/${inquiry.Property.slug}`}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <ExternalLink className="h-4 w-4" />
-            </Link>
-          </div>
-
-          {type === "received" && (
-            <div className="mt-2">
-              <p className="font-medium text-sm text-foreground">{inquiry.name}</p>
-              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                <a
-                  href={`mailto:${inquiry.email}`}
-                  className="flex items-center gap-1 hover:text-primary"
-                >
-                  <Mail className="h-3 w-3" />
-                  {inquiry.email}
-                </a>
-                {inquiry.phone && (
-                  <a
-                    href={`tel:${inquiry.phone}`}
-                    className="flex items-center gap-1 hover:text-primary"
-                  >
-                    <Phone className="h-3 w-3" />
-                    {inquiry.phone}
-                  </a>
-                )}
-              </div>
-            </div>
-          )}
-
-          <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
-            {inquiry.message}
-          </p>
-
-          {type === "received" && (
-            <div className="mt-3 flex gap-2">
-              <Button size="sm" asChild>
-                <a href={`mailto:${inquiry.email}`}>Responder</a>
-              </Button>
-              {inquiry.phone && (
-                <Button size="sm" variant="outline" asChild>
-                  <a href={`tel:${inquiry.phone}`}>Llamar</a>
-                </Button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-
-  if (isLoading) {
-    return (
-      <div className="space-y-8">
-        <div>
-          <Skeleton className="h-8 w-32 mb-2" />
-          <Skeleton className="h-4 w-48" />
-        </div>
-        <Skeleton className="h-10 w-64" />
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-32 rounded-lg" />
-          ))}
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-foreground">Mensajes</h1>
-        <p className="text-muted-foreground">
-          Administra las consultas sobre tus propiedades
-        </p>
+    <div className="h-[calc(100vh-8rem)] lg:h-[calc(100vh-6rem)] -m-4 lg:-m-6">
+      {/* Desktop Layout */}
+      <div className="hidden lg:flex h-full border border-border rounded-lg overflow-hidden">
+        {/* Conversation List */}
+        <div className="w-80 xl:w-96 border-r border-border flex flex-col bg-card">
+          <div className="p-4 border-b border-border">
+            <h1 className="text-lg font-semibold text-foreground">Mensajes</h1>
+            <p className="text-sm text-muted-foreground">
+              {conversations.length} conversacion{conversations.length !== 1 ? "es" : ""}
+            </p>
+          </div>
+          <div className="flex-1 overflow-y-auto">
+            <ConversationList
+              conversations={conversations}
+              selectedId={selectedConversation?.id || null}
+              onSelect={handleSelectConversation}
+              isLoading={isLoadingConversations}
+            />
+          </div>
+        </div>
+
+        {/* Chat View */}
+        <div className="flex-1 flex flex-col">
+          <ChatView
+            conversation={conversationDetails}
+            messages={messages}
+            isLoading={isLoadingMessages}
+            isSending={isSending}
+            onSendMessage={handleSendMessage}
+            onBack={handleBack}
+          />
+        </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
-          <TabsTrigger value="received">
-            Recibidos ({receivedInquiries.length})
-          </TabsTrigger>
-          <TabsTrigger value="sent">
-            Enviados ({sentInquiries.length})
-          </TabsTrigger>
-        </TabsList>
+      {/* Mobile Layout */}
+      <div className="lg:hidden h-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
+          <div className="border-b border-border px-4 pt-4">
+            <h1 className="text-lg font-semibold text-foreground mb-3">Mensajes</h1>
+            <TabsList className="w-full">
+              <TabsTrigger value="conversations" className="flex-1">
+                Conversaciones
+                {conversations.filter(c => c.unreadCount > 0).length > 0 && (
+                  <span className="ml-2 bg-primary text-primary-foreground text-xs rounded-full px-2 py-0.5">
+                    {conversations.filter(c => c.unreadCount > 0).length}
+                  </span>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="chat" className="flex-1" disabled={!selectedConversation}>
+                Chat
+              </TabsTrigger>
+            </TabsList>
+          </div>
 
-        <TabsContent value="received" className="mt-6">
-          {receivedInquiries.length === 0 ? (
-            <EmptyState
-              icon={MessageSquare}
-              title="No tienes mensajes recibidos"
-              description="Cuando alguien te contacte sobre tus propiedades, aparecera aqui"
-              actionLabel="Publicar propiedad"
-              actionHref="/venta"
-            />
-          ) : (
-            <div className="space-y-4">
-              {receivedInquiries.map((inquiry) => (
-                <InquiryCard key={inquiry.id} inquiry={inquiry} type="received" />
-              ))}
+          <TabsContent value="conversations" className="flex-1 overflow-hidden m-0">
+            <div className="h-full overflow-y-auto">
+              <ConversationList
+                conversations={conversations}
+                selectedId={selectedConversation?.id || null}
+                onSelect={handleSelectConversation}
+                isLoading={isLoadingConversations}
+              />
             </div>
-          )}
-        </TabsContent>
+          </TabsContent>
 
-        <TabsContent value="sent" className="mt-6">
-          {sentInquiries.length === 0 ? (
-            <EmptyState
-              icon={MessageSquare}
-              title="No has enviado mensajes"
-              description="Cuando contactes a un vendedor, el mensaje aparecera aqui"
-              actionLabel="Explorar propiedades"
-              actionHref="/propiedades"
+          <TabsContent value="chat" className="flex-1 overflow-hidden m-0">
+            <ChatView
+              conversation={conversationDetails}
+              messages={messages}
+              isLoading={isLoadingMessages}
+              isSending={isSending}
+              onSendMessage={handleSendMessage}
+              onBack={handleBack}
             />
-          ) : (
-            <div className="space-y-4">
-              {sentInquiries.map((inquiry) => (
-                <InquiryCard key={inquiry.id} inquiry={inquiry} type="sent" />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 }

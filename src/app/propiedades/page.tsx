@@ -7,8 +7,17 @@ import { PropertyMap } from "@/components/map/PropertyMap";
 import { FiltersSidebar } from "@/components/search/FiltersSidebar";
 import { PropertySearchBar, SearchFilters } from "@/components/search/PropertySearchBar";
 import { Button } from "@/components/ui/button";
-import { LayoutGrid, Map as MapIcon, ChevronDown, SlidersHorizontal, X, Loader2 } from "lucide-react";
-import { useState, useMemo, useEffect, useCallback } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { LayoutGrid, Map as MapIcon, ChevronDown, SlidersHorizontal, X, Loader2, Bookmark, Check } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState, useMemo, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
 interface Property {
@@ -20,11 +29,20 @@ interface Property {
   bathrooms?: number;
   area?: number;
   imageUrl: string;
+  images?: string[];
   address: string;
   status: string;
   badge?: string;
   latitude?: number;
   longitude?: number;
+  description?: string;
+  yearBuilt?: number;
+  parkingSpaces?: number;
+  floors?: number;
+  amenities?: string[];
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
 }
 
 // Fallback sample data for when database is empty or API fails
@@ -89,7 +107,8 @@ const fallbackProperties: Property[] = [
   },
 ];
 
-export default function PropiedadesPage() {
+function PropiedadesPageContent() {
+  const { user, signInWithGoogle } = useAuth();
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"map" | "grid">("map");
@@ -97,6 +116,13 @@ export default function PropiedadesPage() {
   const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [searchBarFilters, setSearchBarFilters] = useState<SearchFilters | null>(null);
+
+  // Save search state
+  const [showSaveSearchDialog, setShowSaveSearchDialog] = useState(false);
+  const [saveSearchName, setSaveSearchName] = useState("");
+  const [isSavingSearch, setIsSavingSearch] = useState(false);
+  const [searchSaved, setSearchSaved] = useState(false);
+
   const [filters, setFilters] = useState<{
     priceMin: number | null;
     priceMax: number | null;
@@ -121,6 +147,73 @@ export default function PropiedadesPage() {
   const handleSearchBarFiltersChange = useCallback((newFilters: SearchFilters) => {
     setSearchBarFilters(newFilters);
   }, []);
+
+  // Handle saving search
+  const handleSaveSearch = async () => {
+    if (!user) {
+      signInWithGoogle(window.location.pathname + window.location.search);
+      return;
+    }
+
+    if (!saveSearchName.trim()) return;
+
+    setIsSavingSearch(true);
+    try {
+      const criteria = {
+        status: statusParam || "VENTA",
+        ...(searchBarFilters?.location && { location: searchBarFilters.location }),
+        ...(searchBarFilters?.priceMin && { minPrice: searchBarFilters.priceMin }),
+        ...(searchBarFilters?.priceMax && { maxPrice: searchBarFilters.priceMax }),
+        ...(searchBarFilters?.bedrooms && { minBedrooms: searchBarFilters.bedrooms }),
+        ...(filters.priceMin && { minPrice: filters.priceMin }),
+        ...(filters.priceMax && { maxPrice: filters.priceMax }),
+        ...(filters.bedrooms.length > 0 && { bedrooms: filters.bedrooms }),
+        ...(filters.types.length > 0 && { type: filters.types }),
+        ...(filters.state && { state: filters.state }),
+      };
+
+      const response = await fetch("/api/saved-searches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: saveSearchName.trim(),
+          criteria,
+        }),
+      });
+
+      if (response.ok) {
+        setSearchSaved(true);
+        setTimeout(() => {
+          setShowSaveSearchDialog(false);
+          setSaveSearchName("");
+          setSearchSaved(false);
+        }, 1500);
+      } else {
+        const data = await response.json();
+        alert(data.error || "Error al guardar la busqueda");
+      }
+    } catch (error) {
+      console.error("Error saving search:", error);
+      alert("Error al guardar la busqueda");
+    } finally {
+      setIsSavingSearch(false);
+    }
+  };
+
+  // Check if there are any active filters
+  const hasActiveFilters = useMemo(() => {
+    return !!(
+      searchBarFilters?.location ||
+      searchBarFilters?.priceMin ||
+      searchBarFilters?.priceMax ||
+      searchBarFilters?.bedrooms ||
+      filters.priceMin ||
+      filters.priceMax ||
+      filters.bedrooms.length > 0 ||
+      filters.types.length > 0 ||
+      filters.state
+    );
+  }, [searchBarFilters, filters]);
 
 
   // Fetch properties from API
@@ -155,12 +248,19 @@ export default function PropiedadesPage() {
             bedrooms: p.bedrooms || undefined,
             bathrooms: p.bathrooms ? Number(p.bathrooms) : undefined,
             area: p.areaTotal ? Number(p.areaTotal) : undefined,
-            imageUrl: p.mainImageUrl || p.images?.[0]?.url || "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800",
+            imageUrl: p.mainImageUrl || p.PropertyImage?.[0]?.url || "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800",
+            images: p.PropertyImage?.sort((a: any, b: any) => a.order - b.order).map((img: any) => img.url) || [],
             address: `${p.colonia}, ${p.municipality}, ${p.state}`,
             status: p.status,
             badge: p.featured ? "Destacada" : undefined,
             latitude: p.latitude ? Number(p.latitude) : undefined,
             longitude: p.longitude ? Number(p.longitude) : undefined,
+            description: p.description || undefined,
+            yearBuilt: p.yearBuilt || undefined,
+            parkingSpaces: p.parkingSpaces || undefined,
+            amenities: p.amenities || undefined,
+            contactName: p.Profile?.name || undefined,
+            contactEmail: p.Profile?.email || undefined,
           }));
           setProperties(mappedProperties);
         } else {
@@ -260,6 +360,17 @@ export default function PropiedadesPage() {
           <span className="text-sm text-muted-foreground">
             {filteredProperties.length} propiedades encontradas
           </span>
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 hidden sm:flex"
+              onClick={() => setShowSaveSearchDialog(true)}
+            >
+              <Bookmark className="h-4 w-4" />
+              Guardar busqueda
+            </Button>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -459,6 +570,106 @@ export default function PropiedadesPage() {
           onClose={() => setSelectedPropertyId(null)}
         />
       )}
+
+      {/* Save Search Dialog */}
+      <Dialog open={showSaveSearchDialog} onOpenChange={setShowSaveSearchDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Guardar busqueda</DialogTitle>
+            <DialogDescription>
+              Guarda esta busqueda para acceder rapidamente a ella y recibir alertas de nuevas propiedades.
+            </DialogDescription>
+          </DialogHeader>
+
+          {searchSaved ? (
+            <div className="flex flex-col items-center py-6">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                <Check className="h-6 w-6 text-green-600" />
+              </div>
+              <p className="text-foreground font-medium">Busqueda guardada</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label htmlFor="search-name" className="text-sm font-medium text-foreground">
+                    Nombre de la busqueda
+                  </label>
+                  <input
+                    id="search-name"
+                    type="text"
+                    placeholder="Ej: Casas en Polanco menos de 5M"
+                    value={saveSearchName}
+                    onChange={(e) => setSaveSearchName(e.target.value)}
+                    className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Show current filters summary */}
+                <div className="text-sm text-muted-foreground bg-muted rounded-lg p-3">
+                  <p className="font-medium mb-1">Filtros actuales:</p>
+                  <ul className="space-y-1">
+                    <li>Estado: {statusParam === "RENTA" ? "En renta" : "En venta"}</li>
+                    {searchBarFilters?.location && <li>Ubicacion: {searchBarFilters.location}</li>}
+                    {(searchBarFilters?.priceMin || filters.priceMin) && (
+                      <li>Precio minimo: ${((searchBarFilters?.priceMin || filters.priceMin || 0) / 1000000).toFixed(1)}M</li>
+                    )}
+                    {(searchBarFilters?.priceMax || filters.priceMax) && (
+                      <li>Precio maximo: ${((searchBarFilters?.priceMax || filters.priceMax || 0) / 1000000).toFixed(1)}M</li>
+                    )}
+                    {(searchBarFilters?.bedrooms || filters.bedrooms.length > 0) && (
+                      <li>Recamaras: {searchBarFilters?.bedrooms || filters.bedrooms.join(", ")}+</li>
+                    )}
+                    {filters.types.length > 0 && <li>Tipos: {filters.types.join(", ")}</li>}
+                    {filters.state && <li>Estado: {filters.state}</li>}
+                  </ul>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSaveSearchDialog(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSaveSearch}
+                  disabled={!saveSearchName.trim() || isSavingSearch}
+                >
+                  {isSavingSearch ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Bookmark className="h-4 w-4 mr-2" />
+                      Guardar
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+export default function PropiedadesPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-[calc(100vh-64px)] flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Cargando propiedades...</p>
+        </div>
+      </div>
+    }>
+      <PropiedadesPageContent />
+    </Suspense>
   );
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIP, RATE_LIMITS, rateLimitHeaders } from "@/lib/rate-limit";
 
 // GET /api/properties - List properties with filters and pagination
 export async function GET(request: NextRequest) {
@@ -104,6 +105,17 @@ export async function GET(request: NextRequest) {
 // POST /api/properties - Create a new property
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - 20 property creations per hour
+    const clientIP = getClientIP(request);
+    const rateLimitResult = checkRateLimit(`createProperty:${clientIP}`, RATE_LIMITS.createProperty);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Has alcanzado el limite de publicaciones. Intenta mas tarde." },
+        { status: 429, headers: rateLimitHeaders(rateLimitResult) }
+      );
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 

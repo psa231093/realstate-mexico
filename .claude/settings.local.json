@@ -38,7 +38,16 @@
       "Bash(npx tsc:*)",
       "mcp__ide__getDiagnostics",
       "Bash(npx dotenv:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(find:*)",
+      "Bash(tree:*)",
+      "Bash(wc:*)",
+      "Bash(du:*)",
+      "Bash(del \"C:\\\\Users\\\\pablo\\\\OneDrive\\\\Desktop\\\\realestate-mexico\\\\TASKS_BREAKDOWN.json\")",
+      "Bash(del \"C:\\\\Users\\\\pablo\\\\OneDrive\\\\Desktop\\\\realestate-mexico\\\\PHASE1_IMPLEMENTATION.md\")",
+      "Bash(del \"C:\\\\Users\\\\pablo\\\\OneDrive\\\\Desktop\\\\realestate-mexico\\\\ROADMAP_QUICK_REFERENCE.md\")",
+      "Bash(rm:*)",
+      "Bash(npx shadcn@latest add dialog:*)"
     ],
     "deny": [],
     "ask": []

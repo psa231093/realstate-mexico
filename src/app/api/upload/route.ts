@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIP, RATE_LIMITS, rateLimitHeaders } from "@/lib/rate-limit";
 
 // POST /api/upload - Upload image to Supabase Storage
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - 30 uploads per hour
+    const clientIP = getClientIP(request);
+    const rateLimitResult = checkRateLimit(`upload:${clientIP}`, RATE_LIMITS.upload);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Has alcanzado el limite de subidas. Intenta mas tarde." },
+        { status: 429, headers: rateLimitHeaders(rateLimitResult) }
+      );
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 

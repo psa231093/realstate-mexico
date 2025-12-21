@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { formatMXN } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { addRecentlyViewed } from "@/lib/recently-viewed";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -24,6 +27,8 @@ import {
   Copy,
   Check,
   Link,
+  MessageSquare,
+  Loader2,
 } from "lucide-react";
 
 interface Property {
@@ -57,14 +62,29 @@ interface PropertyDetailModalProps {
 }
 
 export function PropertyDetailModal({ property, onClose }: PropertyDetailModalProps) {
+  const router = useRouter();
+  const { user, signInWithGoogle } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
+  const [messageText, setMessageText] = useState(
+    `Hola, me interesa la propiedad "${property.title}" en ${property.address}. ¿Podria darme mas informacion?`
+  );
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [messageError, setMessageError] = useState<string | null>(null);
 
   const propertyUrl = typeof window !== "undefined"
     ? `${window.location.origin}/propiedad/${property.slug}`
     : "";
+
+  // Track recently viewed property
+  useEffect(() => {
+    if (property.id && !property.id.startsWith("sample-")) {
+      addRecentlyViewed(property.id);
+    }
+  }, [property.id]);
 
   const handleShare = async () => {
     // Try native share API first (mobile)
@@ -116,6 +136,47 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
     const body = encodeURIComponent(`Mira esta propiedad:\n\n${property.title}\nPrecio: ${formatMXN(property.price)}\n\n${propertyUrl}`);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
     setShowShareMenu(false);
+  };
+
+  const handleStartConversation = async () => {
+    if (!user) {
+      // Redirect to login
+      signInWithGoogle(window.location.pathname);
+      return;
+    }
+
+    if (!messageText.trim()) {
+      setMessageError("Por favor escribe un mensaje");
+      return;
+    }
+
+    setIsSendingMessage(true);
+    setMessageError(null);
+
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId: property.id,
+          initialMessage: messageText.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Error al enviar mensaje");
+      }
+
+      // Redirect to messages page
+      onClose();
+      router.push("/dashboard/mensajes");
+    } catch (error) {
+      console.error("Error starting conversation:", error);
+      setMessageError(error instanceof Error ? error.message : "Error al enviar mensaje");
+    } finally {
+      setIsSendingMessage(false);
+    }
   };
 
   // Use multiple images or fallback to single image
@@ -420,28 +481,17 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
                       Contactar por WhatsApp
                     </Button>
 
-                    <Button className="w-full py-6 text-base">
-                      Solicitar informacion
+                    <Button
+                      className="w-full py-6 text-base gap-2"
+                      onClick={() => setShowMessageDialog(true)}
+                    >
+                      <MessageSquare className="h-5 w-5" />
+                      Enviar mensaje en la app
                     </Button>
 
                     <Button variant="outline" className="w-full py-6 text-base gap-2">
                       <Phone className="h-4 w-4" />
                       Llamar
-                    </Button>
-
-                    <div className="text-center text-sm text-muted-foreground">
-                      o envia un mensaje
-                    </div>
-
-                    <textarea
-                      className="w-full border border-input bg-background text-foreground rounded-lg p-3 text-sm resize-none focus:ring-2 focus:ring-ring focus:border-ring"
-                      rows={4}
-                      placeholder="Hola, me interesa esta propiedad. ¿Podria darme mas informacion?"
-                    />
-
-                    <Button variant="outline" className="w-full gap-2">
-                      <Mail className="h-4 w-4" />
-                      Enviar mensaje
                     </Button>
                   </div>
 
@@ -467,6 +517,89 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
           </div>
         </div>
       </div>
+
+      {/* Message Dialog */}
+      {showMessageDialog && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowMessageDialog(false)}
+          />
+          <div className="relative bg-card rounded-xl p-6 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setShowMessageDialog(false)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              Enviar mensaje
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Contacta al vendedor de esta propiedad
+            </p>
+
+            {!user && (
+              <div className="mb-4 p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Inicia sesion para enviar mensajes
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => signInWithGoogle(window.location.pathname)}
+                >
+                  Iniciar sesion con Google
+                </Button>
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Tu mensaje
+              </label>
+              <textarea
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                className="w-full border border-input bg-background text-foreground rounded-lg p-3 text-sm resize-none focus:ring-2 focus:ring-ring focus:border-ring"
+                rows={4}
+                placeholder="Escribe tu mensaje aqui..."
+                disabled={!user}
+              />
+              {messageError && (
+                <p className="text-sm text-destructive mt-1">{messageError}</p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowMessageDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 gap-2"
+                onClick={handleStartConversation}
+                disabled={!user || isSendingMessage}
+              >
+                {isSendingMessage ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="h-4 w-4" />
+                    Enviar
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Full Screen Gallery */}
       {showAllPhotos && (

@@ -1,11 +1,12 @@
 "use client";
 
+import { Suspense } from "react";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Home, Share2 } from "lucide-react";
+import { CheckCircle2, Home, Share2, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-export default function SuccessPage() {
+function SuccessPageContent() {
   const searchParams = useSearchParams();
   const listingId = searchParams.get("id");
 
@@ -126,5 +127,17 @@ export default function SuccessPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    }>
+      <SuccessPageContent />
+    </Suspense>
   );
 }
