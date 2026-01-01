@@ -60,8 +60,15 @@ async function getProperty(slug: string) {
       .eq("active", true)
       .single();
 
-    if (error || !property) {
-      console.error("Error fetching property:", error);
+    if (error) {
+      // PGRST116 = "no rows found" - not a real error, just means property doesn't exist
+      if (error.code !== 'PGRST116') {
+        console.error("Error fetching property:", error);
+      }
+      return null;
+    }
+
+    if (!property) {
       return null;
     }
 
