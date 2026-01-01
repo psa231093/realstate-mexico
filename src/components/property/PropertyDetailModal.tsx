@@ -1,8 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { formatMXN } from "@/lib/utils";
+import { useAuth } from "@/contexts/AuthContext";
+import { addRecentlyViewed } from "@/lib/recently-viewed";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
@@ -24,6 +27,8 @@ import {
   Copy,
   Check,
   Link,
+  MessageSquare,
+  Loader2,
 } from "lucide-react";
 
 interface Property {
@@ -39,8 +44,8 @@ interface Property {
   address: string;
   status: string;
   badge?: string;
-  latitude: number;
-  longitude: number;
+  latitude?: number;
+  longitude?: number;
   description?: string;
   yearBuilt?: number;
   parkingSpaces?: number;
@@ -57,14 +62,29 @@ interface PropertyDetailModalProps {
 }
 
 export function PropertyDetailModal({ property, onClose }: PropertyDetailModalProps) {
+  const router = useRouter();
+  const { user, signInWithGoogle } = useAuth();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showMessageDialog, setShowMessageDialog] = useState(false);
+  const [messageText, setMessageText] = useState(
+    `Hola, me interesa la propiedad "${property.title}" en ${property.address}. ¿Podria darme mas informacion?`
+  );
+  const [isSendingMessage, setIsSendingMessage] = useState(false);
+  const [messageError, setMessageError] = useState<string | null>(null);
 
   const propertyUrl = typeof window !== "undefined"
     ? `${window.location.origin}/propiedad/${property.slug}`
     : "";
+
+  // Track recently viewed property
+  useEffect(() => {
+    if (property.id && !property.id.startsWith("sample-")) {
+      addRecentlyViewed(property.id);
+    }
+  }, [property.id]);
 
   const handleShare = async () => {
     // Try native share API first (mobile)
@@ -118,6 +138,47 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
     setShowShareMenu(false);
   };
 
+  const handleStartConversation = async () => {
+    if (!user) {
+      // Redirect to login
+      signInWithGoogle(window.location.pathname);
+      return;
+    }
+
+    if (!messageText.trim()) {
+      setMessageError("Por favor escribe un mensaje");
+      return;
+    }
+
+    setIsSendingMessage(true);
+    setMessageError(null);
+
+    try {
+      const res = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          propertyId: property.id,
+          initialMessage: messageText.trim(),
+        }),
+      });
+
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || "Error al enviar mensaje");
+      }
+
+      // Redirect to messages page
+      onClose();
+      router.push("/dashboard/mensajes");
+    } catch (error) {
+      console.error("Error starting conversation:", error);
+      setMessageError(error instanceof Error ? error.message : "Error al enviar mensaje");
+    } finally {
+      setIsSendingMessage(false);
+    }
+  };
+
   // Use multiple images or fallback to single image
   const images = property.images?.length
     ? property.images
@@ -150,12 +211,12 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
       />
 
       {/* Modal Content */}
-      <div className="relative w-full max-w-5xl max-h-[90vh] bg-white shadow-2xl overflow-hidden flex flex-col rounded-xl animate-in zoom-in-95 duration-200">
+      <div className="relative w-full max-w-5xl max-h-[90vh] bg-card shadow-2xl overflow-hidden flex flex-col rounded-xl animate-in zoom-in-95 duration-200 border border-border">
         {/* Header */}
-        <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+        <div className="sticky top-0 z-10 bg-card border-b border-border px-4 py-3 flex items-center justify-between">
           <button
             onClick={onClose}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-5 w-5" />
             <span className="font-medium">Volver a búsqueda</span>
@@ -179,17 +240,17 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
 
               {/* Share Menu Dropdown */}
               {showShareMenu && (
-                <div className="absolute right-0 top-full mt-1 w-56 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-20">
+                <div className="absolute right-0 top-full mt-1 w-56 bg-card rounded-lg shadow-lg border border-border py-2 z-20">
                   <button
                     onClick={copyToClipboard}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                    className="w-full px-4 py-2 text-left text-sm text-card-foreground hover:bg-accent flex items-center gap-3"
                   >
                     {copied ? <Check className="h-4 w-4 text-green-600" /> : <Link className="h-4 w-4" />}
                     {copied ? "¡Copiado!" : "Copiar enlace"}
                   </button>
                   <button
                     onClick={shareToWhatsApp}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                    className="w-full px-4 py-2 text-left text-sm text-card-foreground hover:bg-accent flex items-center gap-3"
                   >
                     <svg className="h-4 w-4 text-green-500" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
@@ -198,7 +259,7 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
                   </button>
                   <button
                     onClick={shareToFacebook}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                    className="w-full px-4 py-2 text-left text-sm text-card-foreground hover:bg-accent flex items-center gap-3"
                   >
                     <svg className="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
@@ -207,7 +268,7 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
                   </button>
                   <button
                     onClick={shareToTwitter}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                    className="w-full px-4 py-2 text-left text-sm text-card-foreground hover:bg-accent flex items-center gap-3"
                   >
                     <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
@@ -216,7 +277,7 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
                   </button>
                   <button
                     onClick={shareByEmail}
-                    className="w-full px-4 py-2 text-left text-sm text-gray-700 hover:bg-gray-100 flex items-center gap-3"
+                    className="w-full px-4 py-2 text-left text-sm text-card-foreground hover:bg-accent flex items-center gap-3"
                   >
                     <Mail className="h-4 w-4" />
                     Email
@@ -266,7 +327,7 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
               {/* See all photos button */}
               <button
                 onClick={() => setShowAllPhotos(true)}
-                className="absolute bottom-4 right-4 bg-white px-4 py-2 rounded-lg shadow-md text-sm font-medium hover:bg-gray-50 transition-colors flex items-center gap-2"
+                className="absolute bottom-4 right-4 bg-card px-4 py-2 rounded-lg shadow-md text-sm font-medium hover:bg-accent transition-colors flex items-center gap-2 text-card-foreground"
               >
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
@@ -283,62 +344,62 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
               <div className="lg:col-span-2 space-y-6">
                 {/* Price and Address */}
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                  <h1 className="text-3xl font-bold text-card-foreground mb-2">
                     {formatMXN(property.price)}
                   </h1>
-                  <p className="text-gray-600 flex items-center gap-1">
+                  <p className="text-muted-foreground flex items-center gap-1">
                     <MapPin className="h-4 w-4" />
                     {property.address}
                   </p>
                 </div>
 
                 {/* Key Stats */}
-                <div className="flex items-center gap-6 py-4 border-y border-gray-200">
+                <div className="flex items-center gap-6 py-4 border-y border-border">
                   {property.bedrooms && (
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-gray-900">{property.bedrooms}</p>
-                      <p className="text-sm text-gray-500">recámaras</p>
+                      <p className="text-2xl font-bold text-card-foreground">{property.bedrooms}</p>
+                      <p className="text-sm text-muted-foreground">recámaras</p>
                     </div>
                   )}
                   {property.bathrooms && (
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-gray-900">{property.bathrooms}</p>
-                      <p className="text-sm text-gray-500">baños</p>
+                      <p className="text-2xl font-bold text-card-foreground">{property.bathrooms}</p>
+                      <p className="text-sm text-muted-foreground">baños</p>
                     </div>
                   )}
                   {property.area && (
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-gray-900">{property.area}</p>
-                      <p className="text-sm text-gray-500">m²</p>
+                      <p className="text-2xl font-bold text-card-foreground">{property.area}</p>
+                      <p className="text-sm text-muted-foreground">m²</p>
                     </div>
                   )}
                 </div>
 
                 {/* Property Details */}
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h2 className="text-lg font-semibold text-card-foreground mb-4">
                     Detalles de la propiedad
                   </h2>
                   <div className="grid grid-cols-2 gap-4">
-                    <div className="flex items-center gap-3 text-gray-600">
-                      <Building className="h-5 w-5 text-gray-400" />
+                    <div className="flex items-center gap-3 text-muted-foreground">
+                      <Building className="h-5 w-5" />
                       <span>Tipo: Casa</span>
                     </div>
                     {property.yearBuilt && (
-                      <div className="flex items-center gap-3 text-gray-600">
-                        <Calendar className="h-5 w-5 text-gray-400" />
+                      <div className="flex items-center gap-3 text-muted-foreground">
+                        <Calendar className="h-5 w-5" />
                         <span>Año: {property.yearBuilt}</span>
                       </div>
                     )}
                     {property.parkingSpaces && (
-                      <div className="flex items-center gap-3 text-gray-600">
-                        <Car className="h-5 w-5 text-gray-400" />
+                      <div className="flex items-center gap-3 text-muted-foreground">
+                        <Car className="h-5 w-5" />
                         <span>Estacionamiento: {property.parkingSpaces}</span>
                       </div>
                     )}
                     {property.floors && (
-                      <div className="flex items-center gap-3 text-gray-600">
-                        <Building className="h-5 w-5 text-gray-400" />
+                      <div className="flex items-center gap-3 text-muted-foreground">
+                        <Building className="h-5 w-5" />
                         <span>Pisos: {property.floors}</span>
                       </div>
                     )}
@@ -347,10 +408,10 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
 
                 {/* Description */}
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h2 className="text-lg font-semibold text-card-foreground mb-4">
                     Descripción
                   </h2>
-                  <p className="text-gray-600 leading-relaxed">
+                  <p className="text-muted-foreground leading-relaxed">
                     {property.description ||
                       `Hermosa propiedad ubicada en ${property.address}. Esta propiedad cuenta con ${property.bedrooms || 3} recámaras, ${property.bathrooms || 2} baños y ${property.area || 200} m² de construcción. Excelente ubicación con fácil acceso a servicios, escuelas y centros comerciales. No pierdas la oportunidad de conocer esta increíble propiedad.`}
                   </p>
@@ -358,14 +419,14 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
 
                 {/* Amenities */}
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h2 className="text-lg font-semibold text-card-foreground mb-4">
                     Características
                   </h2>
                   <div className="flex flex-wrap gap-2">
                     {amenities.map((amenity, index) => (
                       <span
                         key={index}
-                        className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm"
+                        className="px-3 py-1 bg-muted text-muted-foreground rounded-full text-sm"
                       >
                         {amenity}
                       </span>
@@ -375,10 +436,10 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
 
                 {/* Location Map */}
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  <h2 className="text-lg font-semibold text-card-foreground mb-4">
                     Ubicación
                   </h2>
-                  <div className="h-64 bg-gray-200 rounded-lg overflow-hidden">
+                  <div className="h-64 bg-muted rounded-lg overflow-hidden">
                     <iframe
                       src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8&q=${property.latitude},${property.longitude}&zoom=15`}
                       width="100%"
@@ -394,50 +455,59 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
 
               {/* Right Column - Contact Card */}
               <div className="lg:col-span-1">
-                <div className="sticky top-24 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                <div className="sticky top-24 bg-card border border-border rounded-xl p-6 shadow-sm">
+                  <h3 className="text-lg font-semibold text-card-foreground mb-4">
                     Contactar al vendedor
                   </h3>
 
                   <div className="space-y-4">
-                    <Button className="w-full bg-blue-600 hover:bg-blue-700 py-6 text-base">
-                      Solicitar información
+                    {/* WhatsApp Contact Button - Primary CTA */}
+                    <Button
+                      className="w-full py-6 text-base gap-2 bg-green-600 hover:bg-green-700"
+                      onClick={() => {
+                        const phone = property.contactPhone?.replace(/\D/g, "") || "";
+                        const message = encodeURIComponent(
+                          `Hola, me interesa la propiedad "${property.title}" en ${property.address} con precio de ${formatMXN(property.price)}. ¿Podria darme mas informacion?`
+                        );
+                        const whatsappUrl = phone
+                          ? `https://wa.me/52${phone}?text=${message}`
+                          : `https://wa.me/?text=${message}`;
+                        window.open(whatsappUrl, "_blank");
+                      }}
+                    >
+                      <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                      </svg>
+                      Contactar por WhatsApp
+                    </Button>
+
+                    <Button
+                      className="w-full py-6 text-base gap-2"
+                      onClick={() => setShowMessageDialog(true)}
+                    >
+                      <MessageSquare className="h-5 w-5" />
+                      Enviar mensaje en la app
                     </Button>
 
                     <Button variant="outline" className="w-full py-6 text-base gap-2">
                       <Phone className="h-4 w-4" />
                       Llamar
                     </Button>
-
-                    <div className="text-center text-sm text-gray-500">
-                      o envía un mensaje
-                    </div>
-
-                    <textarea
-                      className="w-full border border-gray-300 rounded-lg p-3 text-sm resize-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      rows={4}
-                      placeholder="Hola, me interesa esta propiedad. ¿Podría darme más información?"
-                    />
-
-                    <Button variant="outline" className="w-full gap-2">
-                      <Mail className="h-4 w-4" />
-                      Enviar mensaje
-                    </Button>
                   </div>
 
                   {/* Agent Info */}
-                  <div className="mt-6 pt-6 border-t border-gray-200">
+                  <div className="mt-6 pt-6 border-t border-border">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
-                        <span className="text-lg font-semibold text-gray-600">
+                      <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center">
+                        <span className="text-lg font-semibold text-muted-foreground">
                           {(property.contactName || "Vendedor")[0]}
                         </span>
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900">
+                        <p className="font-medium text-card-foreground">
                           {property.contactName || "Vendedor"}
                         </p>
-                        <p className="text-sm text-gray-500">Propietario</p>
+                        <p className="text-sm text-muted-foreground">Propietario</p>
                       </div>
                     </div>
                   </div>
@@ -447,6 +517,89 @@ export function PropertyDetailModal({ property, onClose }: PropertyDetailModalPr
           </div>
         </div>
       </div>
+
+      {/* Message Dialog */}
+      {showMessageDialog && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowMessageDialog(false)}
+          />
+          <div className="relative bg-card rounded-xl p-6 w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+            <button
+              onClick={() => setShowMessageDialog(false)}
+              className="absolute top-4 right-4 text-muted-foreground hover:text-foreground"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <h3 className="text-lg font-semibold text-foreground mb-2">
+              Enviar mensaje
+            </h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              Contacta al vendedor de esta propiedad
+            </p>
+
+            {!user && (
+              <div className="mb-4 p-3 bg-muted rounded-lg">
+                <p className="text-sm text-muted-foreground mb-2">
+                  Inicia sesion para enviar mensajes
+                </p>
+                <Button
+                  size="sm"
+                  onClick={() => signInWithGoogle(window.location.pathname)}
+                >
+                  Iniciar sesion con Google
+                </Button>
+              </div>
+            )}
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Tu mensaje
+              </label>
+              <textarea
+                value={messageText}
+                onChange={(e) => setMessageText(e.target.value)}
+                className="w-full border border-input bg-background text-foreground rounded-lg p-3 text-sm resize-none focus:ring-2 focus:ring-ring focus:border-ring"
+                rows={4}
+                placeholder="Escribe tu mensaje aqui..."
+                disabled={!user}
+              />
+              {messageError && (
+                <p className="text-sm text-destructive mt-1">{messageError}</p>
+              )}
+            </div>
+
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => setShowMessageDialog(false)}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className="flex-1 gap-2"
+                onClick={handleStartConversation}
+                disabled={!user || isSendingMessage}
+              >
+                {isSendingMessage ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Enviando...
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="h-4 w-4" />
+                    Enviar
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Full Screen Gallery */}
       {showAllPhotos && (

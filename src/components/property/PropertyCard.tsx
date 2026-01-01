@@ -1,10 +1,13 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Heart, Bed, Bath, Maximize } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatMXN } from "@/lib/utils";
+import { WhatsAppButton } from "@/components/ui/WhatsAppButton";
+import { PricePerM2Badge } from "./PricePerM2Badge";
 
 interface PropertyCardProps {
   id: string;
@@ -18,7 +21,7 @@ interface PropertyCardProps {
   address: string;
   status: string;
   badge?: string;
-  onClick?: () => void;
+  contactPhone?: string;
 }
 
 export function PropertyCard({
@@ -33,13 +36,13 @@ export function PropertyCard({
   address,
   status,
   badge,
-  onClick,
+  contactPhone,
 }: PropertyCardProps) {
   return (
-    <div className="block group cursor-pointer" onClick={onClick}>
-      <div className="bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-xl transition-all duration-300">
+    <Link href={`/propiedades/${slug}`} className="block group">
+      <div className="bg-card rounded-lg overflow-hidden border border-border hover:shadow-xl transition-all duration-300">
         {/* Image Container */}
-        <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
+        <div className="relative aspect-[4/3] overflow-hidden bg-muted">
           <Image
             src={imageUrl}
             alt={title}
@@ -60,7 +63,7 @@ export function PropertyCard({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-3 right-3 bg-white/90 hover:bg-white rounded-full"
+            className="absolute top-3 right-3 bg-background/90 hover:bg-background rounded-full"
             onClick={(e) => {
               e.stopPropagation();
               // TODO: Implement favorite functionality
@@ -68,19 +71,37 @@ export function PropertyCard({
           >
             <Heart className="h-4 w-4" />
           </Button>
+
+          {/* WhatsApp Button */}
+          <div className="absolute bottom-3 right-3">
+            <WhatsAppButton
+              property={{
+                propertyTitle: title,
+                propertyPrice: price,
+                propertyAddress: address,
+                contactPhone,
+              }}
+              size="icon"
+              showText={false}
+              className="h-9 w-9 rounded-full shadow-md"
+            />
+          </div>
         </div>
 
         {/* Content */}
         <div className="p-4">
           {/* Price */}
           <div className="mb-2">
-            <p className="text-2xl font-bold text-gray-900">
+            <p className="text-2xl font-bold text-card-foreground">
               {formatMXN(price)}
             </p>
+            {area && (
+              <PricePerM2Badge price={price} area={area} size="sm" />
+            )}
           </div>
 
           {/* Property Details */}
-          <div className="flex items-center gap-3 text-sm text-gray-600 mb-3">
+          <div className="flex items-center gap-3 text-sm text-muted-foreground mb-3">
             {bedrooms !== undefined && (
               <div className="flex items-center gap-1">
                 <Bed className="h-4 w-4" />
@@ -102,14 +123,14 @@ export function PropertyCard({
           </div>
 
           {/* Address */}
-          <p className="text-sm text-gray-600 truncate">{address}</p>
+          <p className="text-sm text-muted-foreground truncate">{address}</p>
 
           {/* Status */}
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-muted-foreground/70 mt-2">
             {status === "VENTA" ? "En Venta" : "En Renta"}
           </p>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

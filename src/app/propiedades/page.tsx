@@ -2,18 +2,52 @@
 
 import { PropertyCard } from "@/components/property/PropertyCard";
 import { PropertyCardCompact } from "@/components/property/PropertyCardCompact";
-import { PropertyDetailModal } from "@/components/property/PropertyDetailModal";
 import { PropertyMap } from "@/components/map/PropertyMap";
 import { FiltersSidebar } from "@/components/search/FiltersSidebar";
+import { PropertySearchBar, SearchFilters } from "@/components/search/PropertySearchBar";
 import { Button } from "@/components/ui/button";
-import { LayoutGrid, Map as MapIcon, ChevronDown, SlidersHorizontal, X } from "lucide-react";
-import { useState, useMemo } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { LayoutGrid, Map as MapIcon, ChevronDown, SlidersHorizontal, X, Loader2, Bookmark, Check } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useState, useMemo, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 
-// Extended sample data with coordinates - in production, this would come from the database
-const sampleProperties = [
+interface Property {
+  id: string;
+  slug: string;
+  title: string;
+  price: number;
+  bedrooms?: number;
+  bathrooms?: number;
+  area?: number;
+  imageUrl: string;
+  images?: string[];
+  address: string;
+  status: string;
+  badge?: string;
+  latitude?: number;
+  longitude?: number;
+  description?: string;
+  yearBuilt?: number;
+  parkingSpaces?: number;
+  floors?: number;
+  amenities?: string[];
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+}
+
+// Fallback sample data for when database is empty or API fails
+const fallbackProperties: Property[] = [
   {
-    id: "1",
+    id: "sample-1",
     slug: "casa-polanco-cdmx",
     title: "Hermosa Casa en Polanco",
     price: 12500000,
@@ -21,14 +55,14 @@ const sampleProperties = [
     bathrooms: 3.5,
     area: 350,
     imageUrl: "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800",
-    address: "Polanco, Miguel Hidalgo, Ciudad de México, 11560",
+    address: "Polanco, Miguel Hidalgo, Ciudad de M\u00e9xico, 11560",
     status: "VENTA",
     badge: "Destacada",
     latitude: 19.4352,
     longitude: -99.1944,
   },
   {
-    id: "2",
+    id: "sample-2",
     slug: "departamento-condesa",
     title: "Departamento Moderno Condesa",
     price: 4500000,
@@ -36,14 +70,14 @@ const sampleProperties = [
     bathrooms: 2,
     area: 120,
     imageUrl: "https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?w=800",
-    address: "Condesa, Cuauhtémoc, Ciudad de México, 06140",
+    address: "Condesa, Cuauht\u00e9moc, Ciudad de M\u00e9xico, 06140",
     status: "VENTA",
-    badge: "Precio Rebajado",
+    badge: "Nueva",
     latitude: 19.4111,
     longitude: -99.1747,
   },
   {
-    id: "3",
+    id: "sample-3",
     slug: "casa-santa-fe",
     title: "Casa en Santa Fe",
     price: 18900000,
@@ -51,91 +85,50 @@ const sampleProperties = [
     bathrooms: 4,
     area: 450,
     imageUrl: "https://images.unsplash.com/photo-1512917774080-9991f1c4c750?w=800",
-    address: "Santa Fe, Cuajimalpa, Ciudad de México, 05348",
+    address: "Santa Fe, Cuajimalpa, Ciudad de M\u00e9xico, 05348",
     status: "VENTA",
     latitude: 19.3664,
     longitude: -99.2618,
   },
   {
-    id: "4",
+    id: "sample-4",
     slug: "casa-coyoacan",
-    title: "Casa Colonial Coyoacán",
+    title: "Casa Colonial Coyoac\u00e1n",
     price: 8750000,
     bedrooms: 3,
     bathrooms: 2.5,
     area: 280,
     imageUrl: "https://images.unsplash.com/photo-1600596542815-ffad4c1539a9?w=800",
-    address: "Coyoacán, Ciudad de México, 04100",
+    address: "Coyoac\u00e1n, Ciudad de M\u00e9xico, 04100",
     status: "VENTA",
     latitude: 19.3467,
     longitude: -99.1617,
   },
-  {
-    id: "5",
-    slug: "departamento-roma-norte",
-    title: "Departamento Loft Roma Norte",
-    price: 3800000,
-    bedrooms: 1,
-    bathrooms: 1,
-    area: 85,
-    imageUrl: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800",
-    address: "Roma Norte, Cuauhtémoc, Ciudad de México, 06700",
-    status: "VENTA",
-    latitude: 19.4195,
-    longitude: -99.1619,
-  },
-  {
-    id: "6",
-    slug: "casa-san-angel",
-    title: "Casa con Jardín San Ángel",
-    price: 15200000,
-    bedrooms: 4,
-    bathrooms: 3,
-    area: 400,
-    imageUrl: "https://images.unsplash.com/photo-1600607687939-ce8a6c25118c?w=800",
-    address: "San Ángel, Álvaro Obregón, Ciudad de México, 01000",
-    status: "VENTA",
-    badge: "Nueva",
-    latitude: 19.3488,
-    longitude: -99.1901,
-  },
-  {
-    id: "7",
-    slug: "departamento-del-valle",
-    title: "Departamento Del Valle",
-    price: 5600000,
-    bedrooms: 3,
-    bathrooms: 2,
-    area: 145,
-    imageUrl: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800",
-    address: "Del Valle, Benito Juárez, Ciudad de México, 03100",
-    status: "VENTA",
-    latitude: 19.3891,
-    longitude: -99.1708,
-  },
-  {
-    id: "8",
-    slug: "casa-tlalpan",
-    title: "Casa Amplia Tlalpan",
-    price: 9800000,
-    bedrooms: 4,
-    bathrooms: 3,
-    area: 320,
-    imageUrl: "https://images.unsplash.com/photo-1600566753086-00f18fb6b3ea?w=800",
-    address: "Tlalpan, Ciudad de México, 14000",
-    status: "VENTA",
-    latitude: 19.2866,
-    longitude: -99.1669,
-  },
 ];
 
-export default function PropiedadesPage() {
+function PropiedadesPageContent() {
+  const { user, signInWithGoogle } = useAuth();
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"map" | "grid">("map");
-  const [sortBy, setSortBy] = useState("newest");
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [filters, setFilters] = useState<any>({
+  const [searchBarFilters, setSearchBarFilters] = useState<SearchFilters | null>(null);
+
+  // Save search state
+  const [showSaveSearchDialog, setShowSaveSearchDialog] = useState(false);
+  const [saveSearchName, setSaveSearchName] = useState("");
+  const [isSavingSearch, setIsSavingSearch] = useState(false);
+  const [searchSaved, setSearchSaved] = useState(false);
+
+  const [filters, setFilters] = useState<{
+    priceMin: number | null;
+    priceMax: number | null;
+    bedrooms: number[];
+    bathrooms: number[];
+    types: string[];
+    state: string | null;
+  }>({
     priceMin: null,
     priceMax: null,
     bedrooms: [],
@@ -144,39 +137,172 @@ export default function PropiedadesPage() {
     state: null,
   });
 
-  // Find selected property for modal
-  const selectedProperty = selectedPropertyId
-    ? sampleProperties.find((p) => p.id === selectedPropertyId)
-    : null;
-
   const searchParams = useSearchParams();
   const searchQuery = searchParams.get("q");
   const statusParam = searchParams.get("status");
 
-  // Filter properties based on active filters
+  // Handle search bar filter changes
+  const handleSearchBarFiltersChange = useCallback((newFilters: SearchFilters) => {
+    setSearchBarFilters(newFilters);
+  }, []);
+
+  // Handle saving search
+  const handleSaveSearch = async () => {
+    if (!user) {
+      signInWithGoogle(window.location.pathname + window.location.search);
+      return;
+    }
+
+    if (!saveSearchName.trim()) return;
+
+    setIsSavingSearch(true);
+    try {
+      const criteria = {
+        status: statusParam || "VENTA",
+        ...(searchBarFilters?.location && { location: searchBarFilters.location }),
+        ...(searchBarFilters?.priceMin && { minPrice: searchBarFilters.priceMin }),
+        ...(searchBarFilters?.priceMax && { maxPrice: searchBarFilters.priceMax }),
+        ...(searchBarFilters?.bedrooms && { minBedrooms: searchBarFilters.bedrooms }),
+        ...(filters.priceMin && { minPrice: filters.priceMin }),
+        ...(filters.priceMax && { maxPrice: filters.priceMax }),
+        ...(filters.bedrooms.length > 0 && { bedrooms: filters.bedrooms }),
+        ...(filters.types.length > 0 && { type: filters.types }),
+        ...(filters.state && { state: filters.state }),
+      };
+
+      const response = await fetch("/api/saved-searches", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: saveSearchName.trim(),
+          criteria,
+        }),
+      });
+
+      if (response.ok) {
+        setSearchSaved(true);
+        setTimeout(() => {
+          setShowSaveSearchDialog(false);
+          setSaveSearchName("");
+          setSearchSaved(false);
+        }, 1500);
+      } else {
+        const data = await response.json();
+        alert(data.error || "Error al guardar la busqueda");
+      }
+    } catch (error) {
+      console.error("Error saving search:", error);
+      alert("Error al guardar la busqueda");
+    } finally {
+      setIsSavingSearch(false);
+    }
+  };
+
+  // Check if there are any active filters
+  const hasActiveFilters = useMemo(() => {
+    return !!(
+      searchBarFilters?.location ||
+      searchBarFilters?.priceMin ||
+      searchBarFilters?.priceMax ||
+      searchBarFilters?.bedrooms ||
+      filters.priceMin ||
+      filters.priceMax ||
+      filters.bedrooms.length > 0 ||
+      filters.types.length > 0 ||
+      filters.state
+    );
+  }, [searchBarFilters, filters]);
+
+
+  // Fetch properties from API
+  useEffect(() => {
+    async function fetchProperties() {
+      setIsLoading(true);
+      try {
+        const params = new URLSearchParams();
+        params.set("limit", "50");
+
+        if (statusParam) {
+          params.set("status", statusParam);
+        }
+        if (searchQuery) {
+          params.set("search", searchQuery);
+        }
+
+        const response = await fetch(`/api/properties?${params.toString()}`);
+
+        if (!response.ok) {
+          throw new Error("Failed to fetch properties");
+        }
+
+        const data = await response.json();
+
+        if (data.properties && data.properties.length > 0) {
+          const mappedProperties: Property[] = data.properties.map((p: any) => ({
+            id: p.id,
+            slug: p.slug,
+            title: p.title,
+            price: Number(p.price),
+            bedrooms: p.bedrooms || undefined,
+            bathrooms: p.bathrooms ? Number(p.bathrooms) : undefined,
+            area: p.areaTotal ? Number(p.areaTotal) : undefined,
+            imageUrl: p.mainImageUrl || p.PropertyImage?.[0]?.url || "https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800",
+            images: p.PropertyImage?.sort((a: any, b: any) => a.order - b.order).map((img: any) => img.url) || [],
+            address: `${p.colonia}, ${p.municipality}, ${p.state}`,
+            status: p.status,
+            badge: p.featured ? "Destacada" : undefined,
+            latitude: p.latitude ? Number(p.latitude) : undefined,
+            longitude: p.longitude ? Number(p.longitude) : undefined,
+            description: p.description || undefined,
+            yearBuilt: p.yearBuilt || undefined,
+            parkingSpaces: p.parkingSpaces || undefined,
+            amenities: p.amenities || undefined,
+            contactName: p.Profile?.name || undefined,
+            contactEmail: p.Profile?.email || undefined,
+          }));
+          setProperties(mappedProperties);
+        } else {
+          setProperties(fallbackProperties);
+        }
+      } catch (error) {
+        console.error("Error fetching properties:", error);
+        setProperties(fallbackProperties);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchProperties();
+  }, [searchQuery, statusParam]);
+
+  // Filter properties based on active filters (combining sidebar and search bar)
   const filteredProperties = useMemo(() => {
-    return sampleProperties.filter((property) => {
-      // Status filter from URL
-      if (statusParam && property.status !== statusParam) return false;
+    return properties.filter((property) => {
+      // Search bar price filter (takes priority)
+      const effectivePriceMin = searchBarFilters?.priceMin ?? filters.priceMin;
+      const effectivePriceMax = searchBarFilters?.priceMax ?? filters.priceMax;
 
-      // Price filter
-      if (filters.priceMin && property.price < filters.priceMin) return false;
-      if (filters.priceMax && property.price > filters.priceMax) return false;
+      if (effectivePriceMin && property.price < effectivePriceMin) return false;
+      if (effectivePriceMax && property.price > effectivePriceMax) return false;
 
-      // Bedrooms filter
-      if (filters.bedrooms.length > 0 && property.bedrooms) {
+      // Search bar bedrooms filter
+      if (searchBarFilters?.bedrooms && property.bedrooms) {
+        if (property.bedrooms < searchBarFilters.bedrooms) return false;
+      } else if (filters.bedrooms.length > 0 && property.bedrooms) {
         const hasMatch = filters.bedrooms.some((bed: number) => {
-          if (bed === 5) return property.bedrooms >= 5;
+          if (bed === 5) return property.bedrooms! >= 5;
           return property.bedrooms === bed;
         });
         if (!hasMatch) return false;
       }
 
-      // Bathrooms filter
-      if (filters.bathrooms.length > 0 && property.bathrooms) {
+      // Search bar bathrooms filter
+      if (searchBarFilters?.bathrooms && property.bathrooms) {
+        if (property.bathrooms < searchBarFilters.bathrooms) return false;
+      } else if (filters.bathrooms.length > 0 && property.bathrooms) {
         const hasMatch = filters.bathrooms.some((bath: number) => {
-          if (bath === 4) return property.bathrooms >= 4;
-          return property.bathrooms >= bath && property.bathrooms < bath + 1;
+          if (bath === 4) return property.bathrooms! >= 4;
+          return property.bathrooms! >= bath && property.bathrooms! < bath + 1;
         });
         if (!hasMatch) return false;
       }
@@ -186,51 +312,76 @@ export default function PropiedadesPage() {
         return false;
       }
 
-      // Search query filter
-      if (searchQuery) {
-        const query = searchQuery.toLowerCase();
-        return (
-          property.title.toLowerCase().includes(query) ||
-          property.address.toLowerCase().includes(query)
-        );
+      // Location filter from search bar
+      if (searchBarFilters?.location) {
+        const locationLower = searchBarFilters.location.toLowerCase();
+        if (!property.address.toLowerCase().includes(locationLower) &&
+            !property.title.toLowerCase().includes(locationLower)) {
+          return false;
+        }
       }
 
       return true;
     });
-  }, [filters, searchQuery, statusParam]);
+  }, [properties, filters, searchBarFilters]);
 
   // Get page title based on status
   const pageTitle = statusParam === "RENTA" ? "Propiedades en Renta" : "Propiedades en Venta";
 
+  if (isLoading) {
+    return (
+      <div className="h-[calc(100vh-64px)] flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Cargando propiedades...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-[calc(100vh-64px)] flex flex-col">
-      {/* Top Bar with Filters Toggle */}
-      <div className="bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
+    <div className="h-[calc(100vh-64px)] flex flex-col bg-background">
+      {/* Search Bar */}
+      <PropertySearchBar
+        initialStatus={statusParam === "RENTA" ? "RENTA" : "VENTA"}
+        onFiltersChange={handleSearchBarFiltersChange}
+      />
+
+      {/* Secondary Bar with View Toggle and Results Count */}
+      <div className="bg-card border-b border-border px-4 py-2 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-lg font-semibold text-gray-900">
-            {searchQuery ? `Resultados para "${searchQuery}"` : pageTitle}
-          </h1>
-          <span className="text-sm text-gray-500">
-            {filteredProperties.length} propiedades
+          <span className="text-sm text-muted-foreground">
+            {filteredProperties.length} propiedades encontradas
           </span>
+          {hasActiveFilters && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 hidden sm:flex"
+              onClick={() => setShowSaveSearchDialog(true)}
+            >
+              <Bookmark className="h-4 w-4" />
+              Guardar busqueda
+            </Button>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
           {/* Sort Dropdown */}
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600 hidden sm:inline">Ordenar:</span>
+            <span className="text-sm text-muted-foreground hidden sm:inline">Ordenar:</span>
             <Button
               variant="outline"
               size="sm"
               className="gap-1"
             >
-              <span className="text-sm">Más recientes</span>
+              <span className="text-sm">Mas recientes</span>
               <ChevronDown className="h-4 w-4" />
             </Button>
           </div>
 
           {/* View Toggle */}
-          <div className="flex items-center gap-1 border border-gray-200 rounded-md p-1">
+          <div className="flex items-center gap-1 border border-border rounded-md p-1">
             <Button
               variant={viewMode === "map" ? "secondary" : "ghost"}
               size="sm"
@@ -251,11 +402,11 @@ export default function PropiedadesPage() {
             </Button>
           </div>
 
-          {/* Filters Button (Mobile & Grid view) */}
+          {/* Filters Button (Mobile) */}
           <Button
             variant="outline"
             size="sm"
-            className="gap-1"
+            className="gap-1 lg:hidden"
             onClick={() => setShowFilters(!showFilters)}
           >
             <SlidersHorizontal className="h-4 w-4" />
@@ -266,7 +417,7 @@ export default function PropiedadesPage() {
 
       {/* Main Content */}
       {viewMode === "map" ? (
-        // Map View - Zillow Style
+        // Map View
         <div className="flex-1 flex overflow-hidden">
           {/* Map Section */}
           <div className="flex-1 relative">
@@ -278,10 +429,10 @@ export default function PropiedadesPage() {
           </div>
 
           {/* Properties Sidebar */}
-          <div className="w-[400px] bg-gray-50 border-l border-gray-200 flex flex-col overflow-hidden">
+          <div className="w-[400px] bg-muted/50 border-l border-border flex flex-col overflow-hidden">
             {/* Sidebar Header */}
-            <div className="p-4 bg-white border-b border-gray-200">
-              <p className="text-sm font-medium text-gray-900">
+            <div className="p-4 bg-card border-b border-border">
+              <p className="text-sm font-medium text-foreground">
                 {filteredProperties.length} resultados
               </p>
             </div>
@@ -296,13 +447,12 @@ export default function PropiedadesPage() {
                     isHovered={hoveredPropertyId === property.id}
                     onMouseEnter={() => setHoveredPropertyId(property.id)}
                     onMouseLeave={() => setHoveredPropertyId(null)}
-                    onClick={() => setSelectedPropertyId(property.id)}
                   />
                 ))
               ) : (
                 <div className="text-center py-12">
-                  <p className="text-gray-600 mb-2">No se encontraron propiedades</p>
-                  <p className="text-sm text-gray-500">
+                  <p className="text-muted-foreground mb-2">No se encontraron propiedades</p>
+                  <p className="text-sm text-muted-foreground/70">
                     Intenta ajustar tus filtros
                   </p>
                 </div>
@@ -328,17 +478,16 @@ export default function PropiedadesPage() {
                       <PropertyCard
                         key={property.id}
                         {...property}
-                        onClick={() => setSelectedPropertyId(property.id)}
                       />
                     ))}
                   </div>
                 ) : (
                   <div className="text-center py-12">
-                    <p className="text-lg text-gray-600 mb-2">
+                    <p className="text-lg text-muted-foreground mb-2">
                       No se encontraron propiedades
                     </p>
-                    <p className="text-sm text-gray-500">
-                      Intenta ajustar tus filtros para ver más resultados
+                    <p className="text-sm text-muted-foreground/70">
+                      Intenta ajustar tus filtros para ver m&aacute;s resultados
                     </p>
                   </div>
                 )}
@@ -369,16 +518,16 @@ export default function PropiedadesPage() {
         </div>
       )}
 
-      {/* Filters Drawer - Works in map view (all screens) and grid view (mobile only) */}
+      {/* Filters Drawer */}
       {showFilters && (
         <div className={`fixed inset-0 z-50 ${viewMode === "grid" ? "lg:hidden" : ""}`}>
           <div
             className="absolute inset-0 bg-black/50"
             onClick={() => setShowFilters(false)}
           />
-          <div className="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-white shadow-xl overflow-y-auto">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Filtros</h2>
+          <div className="absolute right-0 top-0 bottom-0 w-full max-w-sm bg-card shadow-xl overflow-y-auto">
+            <div className="p-4 border-b border-border flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-foreground">Filtros</h2>
               <Button
                 variant="ghost"
                 size="icon"
@@ -393,7 +542,7 @@ export default function PropiedadesPage() {
               }} />
             </div>
             {/* Apply Button for Drawer */}
-            <div className="sticky bottom-0 p-4 bg-white border-t border-gray-200">
+            <div className="sticky bottom-0 p-4 bg-card border-t border-border">
               <Button
                 className="w-full"
                 onClick={() => setShowFilters(false)}
@@ -405,13 +554,105 @@ export default function PropiedadesPage() {
         </div>
       )}
 
-      {/* Property Detail Modal */}
-      {selectedProperty && (
-        <PropertyDetailModal
-          property={selectedProperty}
-          onClose={() => setSelectedPropertyId(null)}
-        />
-      )}
+      {/* Save Search Dialog */}
+      <Dialog open={showSaveSearchDialog} onOpenChange={setShowSaveSearchDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Guardar busqueda</DialogTitle>
+            <DialogDescription>
+              Guarda esta busqueda para acceder rapidamente a ella y recibir alertas de nuevas propiedades.
+            </DialogDescription>
+          </DialogHeader>
+
+          {searchSaved ? (
+            <div className="flex flex-col items-center py-6">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mb-3">
+                <Check className="h-6 w-6 text-green-600" />
+              </div>
+              <p className="text-foreground font-medium">Busqueda guardada</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label htmlFor="search-name" className="text-sm font-medium text-foreground">
+                    Nombre de la busqueda
+                  </label>
+                  <input
+                    id="search-name"
+                    type="text"
+                    placeholder="Ej: Casas en Polanco menos de 5M"
+                    value={saveSearchName}
+                    onChange={(e) => setSaveSearchName(e.target.value)}
+                    className="w-full px-3 py-2 border border-input rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Show current filters summary */}
+                <div className="text-sm text-muted-foreground bg-muted rounded-lg p-3">
+                  <p className="font-medium mb-1">Filtros actuales:</p>
+                  <ul className="space-y-1">
+                    <li>Estado: {statusParam === "RENTA" ? "En renta" : "En venta"}</li>
+                    {searchBarFilters?.location && <li>Ubicacion: {searchBarFilters.location}</li>}
+                    {(searchBarFilters?.priceMin || filters.priceMin) && (
+                      <li>Precio minimo: ${((searchBarFilters?.priceMin || filters.priceMin || 0) / 1000000).toFixed(1)}M</li>
+                    )}
+                    {(searchBarFilters?.priceMax || filters.priceMax) && (
+                      <li>Precio maximo: ${((searchBarFilters?.priceMax || filters.priceMax || 0) / 1000000).toFixed(1)}M</li>
+                    )}
+                    {(searchBarFilters?.bedrooms || filters.bedrooms.length > 0) && (
+                      <li>Recamaras: {searchBarFilters?.bedrooms || filters.bedrooms.join(", ")}+</li>
+                    )}
+                    {filters.types.length > 0 && <li>Tipos: {filters.types.join(", ")}</li>}
+                    {filters.state && <li>Estado: {filters.state}</li>}
+                  </ul>
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setShowSaveSearchDialog(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSaveSearch}
+                  disabled={!saveSearchName.trim() || isSavingSearch}
+                >
+                  {isSavingSearch ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Guardando...
+                    </>
+                  ) : (
+                    <>
+                      <Bookmark className="h-4 w-4 mr-2" />
+                      Guardar
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
+  );
+}
+
+export default function PropiedadesPage() {
+  return (
+    <Suspense fallback={
+      <div className="h-[calc(100vh-64px)] flex items-center justify-center bg-background">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin text-primary mx-auto mb-4" />
+          <p className="text-muted-foreground">Cargando propiedades...</p>
+        </div>
+      </div>
+    }>
+      <PropiedadesPageContent />
+    </Suspense>
   );
 }

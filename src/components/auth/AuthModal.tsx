@@ -1,25 +1,26 @@
 "use client";
 
 import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  sellerType: string;
-  sellerTitle: string;
-  redirectPath: string;
+  sellerType?: string;
+  sellerTitle?: string;
+  redirectPath?: string;
 }
 
 export function AuthModal({
   isOpen,
   onClose,
-  sellerType,
-  sellerTitle,
-  redirectPath,
+  sellerType = "",
+  sellerTitle = "",
+  redirectPath = "/dashboard",
 }: AuthModalProps) {
+  const { signInWithGoogle } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   if (!isOpen) return null;
@@ -27,9 +28,10 @@ export function AuthModal({
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
     try {
-      await signIn("google", {
-        callbackUrl: `${redirectPath}?sellerType=${sellerType}`,
-      });
+      const fullRedirectPath = sellerType
+        ? `${redirectPath}?sellerType=${sellerType}`
+        : redirectPath;
+      await signInWithGoogle(fullRedirectPath);
     } catch (error) {
       console.error("Error signing in:", error);
       setIsLoading(false);
@@ -45,11 +47,11 @@ export function AuthModal({
       />
 
       {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 animate-in fade-in zoom-in duration-200">
+      <div className="relative bg-card rounded-2xl shadow-2xl w-full max-w-md mx-4 p-8 animate-in fade-in zoom-in duration-200 border border-border">
         {/* Close button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+          className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors"
         >
           <X className="w-6 h-6" />
         </button>
@@ -57,9 +59,9 @@ export function AuthModal({
         {/* Content */}
         <div className="text-center">
           {/* Icon */}
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-6">
             <svg
-              className="w-8 h-8 text-blue-600"
+              className="w-8 h-8 text-primary"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -74,25 +76,32 @@ export function AuthModal({
           </div>
 
           {/* Title */}
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl font-bold text-card-foreground mb-2">
             Crea tu cuenta
           </h2>
 
           {/* Description */}
-          <p className="text-gray-600 mb-8">
-            Regístrate como <span className="font-semibold">{sellerTitle}</span>{" "}
-            para continuar con tu publicación
+          <p className="text-muted-foreground mb-8">
+            {sellerTitle ? (
+              <>
+                Reg&iacute;strate como <span className="font-semibold text-card-foreground">{sellerTitle}</span>{" "}
+                para continuar con tu publicaci&oacute;n
+              </>
+            ) : (
+              <>Inicia sesi&oacute;n para acceder a todas las funciones</>
+            )}
           </p>
 
           {/* Google Sign In Button */}
           <Button
             onClick={handleGoogleSignIn}
             disabled={isLoading}
-            className="w-full h-12 bg-white hover:bg-gray-50 text-gray-700 border border-gray-300 shadow-sm font-medium"
+            variant="outline"
+            className="w-full h-12 font-medium"
           >
             {isLoading ? (
               <div className="flex items-center gap-3">
-                <div className="w-5 h-5 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin" />
+                <div className="w-5 h-5 border-2 border-muted-foreground border-t-primary rounded-full animate-spin" />
                 <span>Conectando...</span>
               </div>
             ) : (
@@ -122,14 +131,14 @@ export function AuthModal({
           </Button>
 
           {/* Terms */}
-          <p className="text-xs text-gray-500 mt-6">
+          <p className="text-xs text-muted-foreground mt-6">
             Al registrarte, aceptas nuestros{" "}
-            <a href="/terminos" className="text-blue-600 hover:underline">
-              Términos de Servicio
+            <a href="/terminos" className="text-primary hover:underline">
+              T&eacute;rminos de Servicio
             </a>{" "}
             y{" "}
-            <a href="/privacidad" className="text-blue-600 hover:underline">
-              Política de Privacidad
+            <a href="/privacidad" className="text-primary hover:underline">
+              Pol&iacute;tica de Privacidad
             </a>
           </p>
         </div>

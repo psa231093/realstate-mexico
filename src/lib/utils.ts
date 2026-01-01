@@ -57,3 +57,19 @@ export function formatAddress(address: {
 
   return parts.join(', ');
 }
+
+// Calculate price per square meter
+export function calculatePricePerM2(price: number, area: number): number | null {
+  if (!area || area <= 0 || !price || price <= 0) return null;
+  return Math.round(price / area);
+}
+
+// Format price per square meter
+export function formatPricePerM2(pricePerM2: number): string {
+  return new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(pricePerM2) + '/m²';
+}

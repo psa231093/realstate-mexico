@@ -1,11 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import tinify from "tinify";
 
-// Set TinyPNG API key
-tinify.key = "Bmhl5RNlSzlxKz0ZwMXmXk5Q7DTk2FyJ";
+// Set TinyPNG API key from environment variable
+const apiKey = process.env.TINYPNG_API_KEY;
+if (apiKey) {
+  tinify.key = apiKey;
+}
 
 export async function POST(request: NextRequest) {
   try {
+    if (!apiKey) {
+      return NextResponse.json(
+        { error: "TinyPNG API key not configured" },
+        { status: 500 }
+      );
+    }
+
     const { image } = await request.json();
 
     if (!image) {
@@ -20,7 +30,8 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(base64Data, "base64");
 
     // Compress using TinyPNG
-    const compressedBuffer = await tinify.fromBuffer(buffer).toBuffer();
+    const compressedData = await tinify.fromBuffer(buffer).toBuffer();
+    const compressedBuffer = Buffer.from(compressedData);
 
     // Convert back to base64
     const compressedBase64 = `data:image/jpeg;base64,${compressedBuffer.toString("base64")}`;
@@ -40,10 +51,11 @@ export async function POST(request: NextRequest) {
         savedPercentage,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Image compression error:", error);
+    const errorMessage = error instanceof Error ? error.message : "Failed to compress image";
     return NextResponse.json(
-      { error: error.message || "Failed to compress image" },
+      { error: errorMessage },
       { status: 500 }
     );
   }

@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 
@@ -22,14 +23,14 @@ const affordableHomes = [
 
 export function BuyAbilitySection() {
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-16 bg-muted/50">
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+          <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
             Encuentra casas que puedas pagar con CapacidadDeCompra™
           </h2>
-          <p className="text-gray-600">
+          <p className="text-muted-foreground mt-1">
             Responde algunas preguntas. Destacaremos las casas para las que probablemente califiques.
           </p>
         </div>
@@ -37,52 +38,54 @@ export function BuyAbilitySection() {
         {/* Main Grid */}
         <div className="grid lg:grid-cols-[400px,1fr] gap-6">
           {/* Calculator Card */}
-          <div className="bg-white rounded-lg border border-gray-200 p-8 h-fit">
+          <div className="bg-card rounded-lg border border-border p-8 h-fit">
             {/* Logo */}
             <div className="flex items-center gap-2 mb-6">
-              <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center">
-                <svg viewBox="0 0 24 24" className="w-4 h-4 text-white" fill="currentColor">
+              <div className="w-6 h-6 bg-primary rounded flex items-center justify-center">
+                <svg viewBox="0 0 24 24" className="w-4 h-4 text-primary-foreground" fill="currentColor">
                   <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
                 </svg>
               </div>
-              <span className="font-bold text-lg">Zillow Home Loans</span>
+              <span className="font-bold text-lg text-card-foreground">Bienes Raíces México Loans</span>
             </div>
 
             {/* Price Info */}
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div>
-                <p className="text-3xl font-bold text-gray-900">$ - -</p>
-                <p className="text-sm text-gray-600 mt-1">Precio objetivo sugerido</p>
+                <p className="text-3xl font-bold text-card-foreground">$ - -</p>
+                <p className="text-sm text-muted-foreground mt-1">Precio objetivo sugerido</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-gray-900">$ - -</p>
-                <p className="text-sm text-gray-600 mt-1">CapacidadDeCompra™</p>
+                <p className="text-3xl font-bold text-card-foreground">$ - -</p>
+                <p className="text-sm text-muted-foreground mt-1">CapacidadDeCompra™</p>
               </div>
             </div>
 
             {/* Rates Info */}
-            <div className="grid grid-cols-3 gap-4 mb-6 pb-6 border-b">
+            <div className="grid grid-cols-3 gap-4 mb-6 pb-6 border-b border-border">
               <div>
-                <p className="text-xl font-bold text-gray-900">$ - -</p>
-                <p className="text-xs text-gray-600 mt-1">Pago mensual</p>
+                <p className="text-xl font-bold text-card-foreground">$ - -</p>
+                <p className="text-xs text-muted-foreground mt-1">Pago mensual</p>
               </div>
               <div>
-                <p className="text-xl font-bold text-gray-900">- - %</p>
-                <p className="text-xs text-gray-600 mt-1">Tasa de hoy</p>
+                <p className="text-xl font-bold text-card-foreground">- - %</p>
+                <p className="text-xs text-muted-foreground mt-1">Tasa de hoy</p>
               </div>
               <div>
-                <p className="text-xl font-bold text-gray-900">- - %</p>
-                <p className="text-xs text-gray-600 mt-1">APR</p>
+                <p className="text-xl font-bold text-card-foreground">- - %</p>
+                <p className="text-xs text-muted-foreground mt-1">APR</p>
               </div>
             </div>
 
             {/* CTA Button */}
-            <Button
-              size="lg"
-              className="w-full bg-blue-600 hover:bg-blue-700 font-semibold text-base py-6 rounded-lg"
-            >
-              Empecemos
-            </Button>
+            <Link href="/calculadora">
+              <Button
+                size="lg"
+                className="w-full font-semibold text-base py-6 rounded-lg"
+              >
+                Empecemos
+              </Button>
+            </Link>
           </div>
 
           {/* Property Cards Grid */}
@@ -90,10 +93,10 @@ export function BuyAbilitySection() {
             {affordableHomes.map((home) => (
               <div
                 key={home.id}
-                className="bg-white rounded-lg overflow-hidden border border-gray-200 hover:shadow-lg transition-shadow"
+                className="bg-card rounded-lg overflow-hidden border border-border hover:shadow-lg transition-shadow"
               >
                 {/* Image */}
-                <div className="relative aspect-[4/3] bg-gray-100">
+                <div className="relative aspect-[4/3] bg-muted">
                   <Image
                     src={home.imageUrl}
                     alt="Casa dentro de presupuesto"
@@ -113,9 +116,9 @@ export function BuyAbilitySection() {
 
                 {/* Skeleton Content */}
                 <div className="p-4 space-y-3">
-                  <div className="h-4 bg-gray-200 rounded w-3/4 animate-pulse"></div>
-                  <div className="h-3 bg-gray-200 rounded w-full animate-pulse"></div>
-                  <div className="h-3 bg-gray-200 rounded w-2/3 animate-pulse"></div>
+                  <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
+                  <div className="h-3 bg-muted rounded w-full animate-pulse"></div>
+                  <div className="h-3 bg-muted rounded w-2/3 animate-pulse"></div>
                 </div>
               </div>
             ))}

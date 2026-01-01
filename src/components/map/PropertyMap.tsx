@@ -15,8 +15,9 @@ interface Property {
   address: string;
   status: string;
   badge?: string;
-  latitude: number;
-  longitude: number;
+  contactPhone?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 interface PropertyMapProps {
@@ -41,7 +42,8 @@ export function PropertyMap({
 
     // Dynamically import mapbox-gl
     import("mapbox-gl").then((mapboxgl) => {
-      // Import CSS
+      // Import CSS (ignore type error for CSS module)
+      // @ts-ignore
       import("mapbox-gl/dist/mapbox-gl.css");
 
       const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
@@ -52,9 +54,11 @@ export function PropertyMap({
 
       mapboxgl.default.accessToken = token;
 
+      const mapStyle = process.env.NEXT_PUBLIC_MAPBOX_STYLE || "mapbox://styles/mapbox/streets-v12";
+
       const map = new mapboxgl.default.Map({
         container: mapContainerRef.current!,
-        style: "mapbox://styles/mapbox/streets-v12",
+        style: mapStyle,
         center: [-99.1332, 19.4326], // Mexico City
         zoom: 11,
       });
@@ -82,8 +86,13 @@ export function PropertyMap({
       markersRef.current.forEach((marker) => marker.remove());
       markersRef.current = [];
 
-      // Add new markers
+      // Add new markers (only for properties with valid coordinates)
       properties.forEach((property) => {
+        // Skip properties without valid coordinates
+        if (property.latitude === undefined || property.longitude === undefined) {
+          return;
+        }
+
         // Create custom marker element
         const el = document.createElement("div");
         el.className = "property-marker";
@@ -158,8 +167,8 @@ export function PropertyMap({
     <div className="relative w-full h-full">
       <div ref={mapContainerRef} className="w-full h-full" />
       {!mapLoaded && (
-        <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
-          <div className="text-gray-500">Cargando mapa...</div>
+        <div className="absolute inset-0 flex items-center justify-center bg-muted">
+          <div className="text-muted-foreground">Cargando mapa...</div>
         </div>
       )}
     </div>

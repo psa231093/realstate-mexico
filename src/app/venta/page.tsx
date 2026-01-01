@@ -1,14 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useSession } from "next-auth/react";
+import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "next/navigation";
 import { SellerTypeCard } from "@/components/venta/SellerTypeCard";
 import { AuthModal } from "@/components/auth/AuthModal";
 import { User, Building2, Briefcase } from "lucide-react";
 
 export default function VentaPage() {
-  const { data: session } = useSession();
+  const { user } = useAuth();
   const router = useRouter();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [selectedProfile, setSelectedProfile] = useState<{
@@ -18,7 +18,7 @@ export default function VentaPage() {
   } | null>(null);
 
   const handleProfileSelect = (sellerType: string, title: string, href: string) => {
-    if (session) {
+    if (user) {
       // User is already logged in, navigate directly
       router.push(href);
     } else {
@@ -29,7 +29,7 @@ export default function VentaPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white dark:from-background dark:to-background">
       {/* Auth Modal */}
       <AuthModal
         isOpen={isAuthModalOpen}
@@ -44,10 +44,10 @@ export default function VentaPage() {
         <div className="container mx-auto px-4">
           {/* Header */}
           <div className="text-center max-w-3xl mx-auto mb-16">
-            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
-              ¿Con qué perfil te identificas?
+            <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+              &iquest;Con qu&eacute; perfil te identificas?
             </h1>
-            <p className="text-xl text-gray-600">
+            <p className="text-xl text-muted-foreground">
               Selecciona el que se ajusta a tus intereses
             </p>
           </div>
@@ -108,33 +108,33 @@ export default function VentaPage() {
 
           {/* Additional Info */}
           <div className="mt-16 text-center">
-            <p className="text-gray-600 mb-4">
-              ¿No estás seguro cuál opción elegir?
+            <p className="text-muted-foreground mb-4">
+              &iquest;No est&aacute;s seguro cu&aacute;l opci&oacute;n elegir?
             </p>
             <a
               href="/ayuda/tipos-vendedor"
-              className="text-blue-600 hover:text-blue-700 font-medium underline"
+              className="text-primary hover:text-primary/80 font-medium underline"
             >
-              Conoce más sobre cada tipo de vendedor
+              Conoce m&aacute;s sobre cada tipo de vendedor
             </a>
           </div>
         </div>
       </section>
 
       {/* Benefits Section */}
-      <section className="py-16 bg-white border-t">
+      <section className="py-16 bg-card border-t border-border">
         <div className="container mx-auto px-4">
           <div className="max-w-6xl mx-auto">
-            <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
-              ¿Por qué vender con nosotros?
+            <h2 className="text-3xl font-bold text-center text-foreground mb-12">
+              &iquest;Por qu&eacute; vender con nosotros?
             </h2>
 
             <div className="grid md:grid-cols-3 gap-8">
               {/* Benefit 1 */}
               <div className="text-center">
-                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg
-                    className="w-8 h-8 text-blue-600"
+                    className="w-8 h-8 text-blue-600 dark:text-blue-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -153,19 +153,19 @@ export default function VentaPage() {
                     />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Máxima Visibilidad
+                <h3 className="text-xl font-semibold text-foreground mb-2">
+                  M&aacute;xima Visibilidad
                 </h3>
-                <p className="text-gray-600">
-                  Miles de compradores potenciales visitan nuestra plataforma cada día
+                <p className="text-muted-foreground">
+                  Miles de compradores potenciales visitan nuestra plataforma cada d&iacute;a
                 </p>
               </div>
 
               {/* Benefit 2 */}
               <div className="text-center">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg
-                    className="w-8 h-8 text-green-600"
+                    className="w-8 h-8 text-green-600 dark:text-green-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -178,19 +178,19 @@ export default function VentaPage() {
                     />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                <h3 className="text-xl font-semibold text-foreground mb-2">
                   Proceso Seguro
                 </h3>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   Protegemos tus datos y verificamos la identidad de los interesados
                 </p>
               </div>
 
               {/* Benefit 3 */}
               <div className="text-center">
-                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
                   <svg
-                    className="w-8 h-8 text-purple-600"
+                    className="w-8 h-8 text-purple-600 dark:text-purple-400"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -203,11 +203,11 @@ export default function VentaPage() {
                     />
                   </svg>
                 </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                  Venta Rápida
+                <h3 className="text-xl font-semibold text-foreground mb-2">
+                  Venta R&aacute;pida
                 </h3>
-                <p className="text-gray-600">
-                  Herramientas y soporte para que vendas más rápido
+                <p className="text-muted-foreground">
+                  Herramientas y soporte para que vendas m&aacute;s r&aacute;pido
                 </p>
               </div>
             </div>
