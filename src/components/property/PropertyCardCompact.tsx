@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Heart, Bed, Bath, Maximize } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,6 @@ interface PropertyCardCompactProps {
   isHovered?: boolean;
   onMouseEnter?: () => void;
   onMouseLeave?: () => void;
-  onClick?: () => void;
 }
 
 export function PropertyCardCompact({
@@ -43,14 +43,13 @@ export function PropertyCardCompact({
   isHovered,
   onMouseEnter,
   onMouseLeave,
-  onClick,
 }: PropertyCardCompactProps) {
   return (
-    <div
-      className="block group cursor-pointer"
+    <Link
+      href={`/propiedades/${slug}`}
+      className="block group"
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      onClick={onClick}
     >
       <div
         className={`
@@ -141,6 +140,6 @@ export function PropertyCardCompact({
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

@@ -56,6 +56,7 @@ export async function GET(
         Sender:senderId (
           id,
           name,
+          email,
           avatarUrl
         )
       `)
@@ -165,6 +166,7 @@ export async function POST(
         Sender:senderId (
           id,
           name,
+          email,
           avatarUrl
         )
       `)

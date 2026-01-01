@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Heart, Bed, Bath, Maximize } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,6 @@ interface PropertyCardProps {
   status: string;
   badge?: string;
   contactPhone?: string;
-  onClick?: () => void;
 }
 
 export function PropertyCard({
@@ -37,10 +37,9 @@ export function PropertyCard({
   status,
   badge,
   contactPhone,
-  onClick,
 }: PropertyCardProps) {
   return (
-    <div className="block group cursor-pointer" onClick={onClick}>
+    <Link href={`/propiedades/${slug}`} className="block group">
       <div className="bg-card rounded-lg overflow-hidden border border-border hover:shadow-xl transition-all duration-300">
         {/* Image Container */}
         <div className="relative aspect-[4/3] overflow-hidden bg-muted">
@@ -132,6 +131,6 @@ export function PropertyCard({
           </p>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIP, RATE_LIMITS, rateLimitHeaders } from "@/lib/rate-limit";
+import { isValidEmail, sanitizeMessage } from "@/lib/security";
 
 // GET /api/inquiries - Get user's inquiries (sent or received)
 export async function GET(request: NextRequest) {
@@ -122,6 +124,17 @@ export async function GET(request: NextRequest) {
 // POST /api/inquiries - Create a new inquiry
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - 10 inquiries per hour (strict to prevent spam)
+    const clientIP = getClientIP(request);
+    const rateLimitResult = checkRateLimit(`inquiry:${clientIP}`, { limit: 10, windowSeconds: 3600 });
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Has enviado demasiadas consultas. Intenta mas tarde." },
+        { status: 429, headers: rateLimitHeaders(rateLimitResult) }
+      );
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
@@ -135,14 +148,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate email format
+    if (!isValidEmail(email)) {
+      return NextResponse.json(
+        { error: "Formato de email invalido" },
+        { status: 400 }
+      );
+    }
+
+    // Validate name length
+    if (name.length < 2 || name.length > 100) {
+      return NextResponse.json(
+        { error: "Nombre debe tener entre 2 y 100 caracteres" },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize message
+    const sanitizedMessage = sanitizeMessage(message);
+    if (sanitizedMessage.length < 10) {
+      return NextResponse.json(
+        { error: "El mensaje debe tener al menos 10 caracteres" },
+        { status: 400 }
+      );
+    }
+
     const { data: inquiry, error } = await supabase
       .from("Inquiry")
       .insert({
         propertyId,
-        name,
-        email,
-        phone: phone || null,
-        message,
+        name: name.trim().slice(0, 100),
+        email: email.toLowerCase().trim(),
+        phone: phone?.trim().slice(0, 20) || null,
+        message: sanitizedMessage,
         senderId: user?.id || null,
         status: "NUEVO",
       })

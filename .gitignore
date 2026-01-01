@@ -28,9 +28,40 @@ yarn-error.log*
 # local env files
 .env*.local
 .env
+.env.production
+.env.staging
 
 # vercel
 .vercel
+
+# Security - never commit these
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+.secrets
+credentials.json
+service-account*.json
+
+# IDE and editor
+.idea/
+.vscode/settings.json
+*.swp
+*.swo
+
+# Logs
+logs/
+*.log
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Backup files
+*.bak
+*.backup
 
 # typescript
 *.tsbuildinfo

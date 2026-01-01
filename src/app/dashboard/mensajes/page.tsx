@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ConversationList, type Conversation } from "@/components/chat/ConversationList";
 import { ChatView, type Message } from "@/components/chat/ChatView";
-import { cn } from "@/lib/utils";
-
-// Poll interval for new messages (in milliseconds)
-const POLL_INTERVAL = 5000;
+import { createClient } from "@/lib/supabase/client";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 
 export default function MessagesPage() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -18,17 +16,25 @@ export default function MessagesPage() {
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [activeTab, setActiveTab] = useState("conversations");
+  const [error, setError] = useState<string | null>(null);
+
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const supabaseRef = useRef(createClient());
 
   // Fetch conversations
   const fetchConversations = useCallback(async () => {
     try {
+      setError(null);
       const res = await fetch("/api/conversations");
       if (res.ok) {
         const data = await res.json();
         setConversations(data);
+      } else {
+        setError("Error al cargar conversaciones");
       }
     } catch (error) {
       console.error("Error fetching conversations:", error);
+      setError("Error de conexion");
     } finally {
       setIsLoadingConversations(false);
     }
@@ -38,13 +44,17 @@ export default function MessagesPage() {
   const fetchMessages = useCallback(async (conversationId: string, silent = false) => {
     if (!silent) setIsLoadingMessages(true);
     try {
+      setError(null);
       const res = await fetch(`/api/conversations/${conversationId}/messages`);
       if (res.ok) {
         const data = await res.json();
         setMessages(data);
+      } else {
+        if (!silent) setError("Error al cargar mensajes");
       }
     } catch (error) {
       console.error("Error fetching messages:", error);
+      if (!silent) setError("Error de conexion");
     } finally {
       if (!silent) setIsLoadingMessages(false);
     }
@@ -79,17 +89,96 @@ export default function MessagesPage() {
     }
   }, [selectedConversation, fetchMessages, fetchConversationDetails]);
 
-  // Poll for new messages
+  // Setup Supabase Realtime subscription for messages
   useEffect(() => {
-    if (!selectedConversation) return;
+    if (!selectedConversation) {
+      // Cleanup existing channel when no conversation selected
+      if (channelRef.current) {
+        supabaseRef.current.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+      return;
+    }
 
-    const interval = setInterval(() => {
-      fetchMessages(selectedConversation.id, true);
-      fetchConversations(); // Also refresh conversation list for unread counts
-    }, POLL_INTERVAL);
+    const supabase = supabaseRef.current;
 
-    return () => clearInterval(interval);
-  }, [selectedConversation, fetchMessages, fetchConversations]);
+    // Create a channel for this conversation
+    const channel = supabase
+      .channel(`messages:${selectedConversation.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "Message",
+          filter: `conversationId=eq.${selectedConversation.id}`,
+        },
+        async (payload) => {
+          // New message received - fetch full message with sender info
+          const newMessage = payload.new as { id: string; senderId: string };
+
+          // If the message is from someone else, fetch and add it
+          if (conversationDetails && newMessage.senderId !== conversationDetails.currentUserId) {
+            // Fetch the complete message with sender info
+            await fetchMessages(selectedConversation.id, true);
+            // Also update conversation list for unread counts
+            fetchConversations();
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "Message",
+          filter: `conversationId=eq.${selectedConversation.id}`,
+        },
+        (payload) => {
+          // Message updated (e.g., read status changed)
+          const updatedMessage = payload.new as Message;
+          setMessages((prev) =>
+            prev.map((m) => (m.id === updatedMessage.id ? { ...m, readAt: updatedMessage.readAt } : m))
+          );
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel;
+
+    // Cleanup on unmount or conversation change
+    return () => {
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current);
+        channelRef.current = null;
+      }
+    };
+  }, [selectedConversation, conversationDetails, fetchMessages, fetchConversations]);
+
+  // Also subscribe to conversation updates for unread counts
+  useEffect(() => {
+    const supabase = supabaseRef.current;
+
+    const conversationsChannel = supabase
+      .channel("conversations-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "Conversation",
+        },
+        () => {
+          // Refresh conversations when any conversation is updated
+          fetchConversations();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(conversationsChannel);
+    };
+  }, [fetchConversations]);
 
   // Handle conversation selection
   const handleSelectConversation = (conversation: Conversation) => {
@@ -111,6 +200,7 @@ export default function MessagesPage() {
     if (!selectedConversation || isSending) return;
 
     setIsSending(true);
+    setError(null);
     try {
       const res = await fetch(`/api/conversations/${selectedConversation.id}/messages`, {
         method: "POST",
@@ -123,9 +213,14 @@ export default function MessagesPage() {
         setMessages((prev) => [...prev, newMessage]);
         // Update conversation list to show new message preview
         fetchConversations();
+      } else if (res.status === 429) {
+        setError("Demasiados mensajes. Espera un momento.");
+      } else {
+        setError("Error al enviar mensaje");
       }
     } catch (error) {
       console.error("Error sending message:", error);
+      setError("Error de conexion");
     } finally {
       setIsSending(false);
     }
@@ -133,6 +228,16 @@ export default function MessagesPage() {
 
   return (
     <div className="h-[calc(100vh-8rem)] lg:h-[calc(100vh-6rem)] -m-4 lg:-m-6">
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-2 text-sm flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => setError(null)} className="hover:underline">
+            Cerrar
+          </button>
+        </div>
+      )}
+
       {/* Desktop Layout */}
       <div className="hidden lg:flex h-full border border-border rounded-lg overflow-hidden">
         {/* Conversation List */}

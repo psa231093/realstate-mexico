@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { checkRateLimit, getClientIP, rateLimitHeaders } from "@/lib/rate-limit";
 
 // GET /api/favorites - Get user's favorite properties
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -59,6 +60,17 @@ export async function GET() {
 // POST /api/favorites - Add a property to favorites
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting - 60 favorite actions per minute
+    const clientIP = getClientIP(request);
+    const rateLimitResult = checkRateLimit(`favorites:${clientIP}`, { limit: 60, windowSeconds: 60 });
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Demasiadas solicitudes. Intenta de nuevo." },
+        { status: 429, headers: rateLimitHeaders(rateLimitResult) }
+      );
+    }
+
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 

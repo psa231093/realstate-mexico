@@ -2,7 +2,6 @@
 
 import { PropertyCard } from "@/components/property/PropertyCard";
 import { PropertyCardCompact } from "@/components/property/PropertyCardCompact";
-import { PropertyDetailModal } from "@/components/property/PropertyDetailModal";
 import { PropertyMap } from "@/components/map/PropertyMap";
 import { FiltersSidebar } from "@/components/search/FiltersSidebar";
 import { PropertySearchBar, SearchFilters } from "@/components/search/PropertySearchBar";
@@ -113,7 +112,6 @@ function PropiedadesPageContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [viewMode, setViewMode] = useState<"map" | "grid">("map");
   const [hoveredPropertyId, setHoveredPropertyId] = useState<string | null>(null);
-  const [selectedPropertyId, setSelectedPropertyId] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [searchBarFilters, setSearchBarFilters] = useState<SearchFilters | null>(null);
 
@@ -276,11 +274,6 @@ function PropiedadesPageContent() {
 
     fetchProperties();
   }, [searchQuery, statusParam]);
-
-  // Find selected property for modal
-  const selectedProperty = selectedPropertyId
-    ? properties.find((p) => p.id === selectedPropertyId)
-    : null;
 
   // Filter properties based on active filters (combining sidebar and search bar)
   const filteredProperties = useMemo(() => {
@@ -454,7 +447,6 @@ function PropiedadesPageContent() {
                     isHovered={hoveredPropertyId === property.id}
                     onMouseEnter={() => setHoveredPropertyId(property.id)}
                     onMouseLeave={() => setHoveredPropertyId(null)}
-                    onClick={() => setSelectedPropertyId(property.id)}
                   />
                 ))
               ) : (
@@ -486,7 +478,6 @@ function PropiedadesPageContent() {
                       <PropertyCard
                         key={property.id}
                         {...property}
-                        onClick={() => setSelectedPropertyId(property.id)}
                       />
                     ))}
                   </div>
@@ -561,14 +552,6 @@ function PropiedadesPageContent() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Property Detail Modal */}
-      {selectedProperty && (
-        <PropertyDetailModal
-          property={selectedProperty}
-          onClose={() => setSelectedPropertyId(null)}
-        />
       )}
 
       {/* Save Search Dialog */}

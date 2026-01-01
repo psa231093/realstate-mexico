@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/admin";
 import { createClient } from "@/lib/supabase/server";
+import { sanitizeSearchInput } from "@/lib/security";
 
 // GET /api/admin/properties - List all properties (including inactive)
 export async function GET(request: NextRequest) {
@@ -66,7 +67,10 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
-      query = query.or(`title.ilike.%${search}%,colonia.ilike.%${search}%,municipality.ilike.%${search}%`);
+      const sanitizedSearch = sanitizeSearchInput(search);
+      if (sanitizedSearch) {
+        query = query.or(`title.ilike.%${sanitizedSearch}%,colonia.ilike.%${sanitizedSearch}%,municipality.ilike.%${sanitizedSearch}%`);
+      }
     }
 
     // Apply sorting

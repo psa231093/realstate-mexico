@@ -26,7 +26,7 @@ export function Footer() {
 
           {/* Quick Links */}
           <div>
-            <h3 className="font-semibold mb-4 text-foreground">Enlaces Rápidos</h3>
+            <h3 className="font-semibold mb-4 text-foreground">Enlaces Rapidos</h3>
             <ul className="space-y-2 text-sm">
               <li>
                 <Link
@@ -46,10 +46,18 @@ export function Footer() {
               </li>
               <li>
                 <Link
-                  href="/mapa"
+                  href="/venta"
                   className="text-muted-foreground hover:text-primary transition-colors"
                 >
-                  Buscar en Mapa
+                  Publicar Propiedad
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/calculadora"
+                  className="text-muted-foreground hover:text-primary transition-colors"
+                >
+                  Calculadoras
                 </Link>
               </li>
             </ul>

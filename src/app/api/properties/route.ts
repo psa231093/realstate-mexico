@@ -1,10 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, getClientIP, RATE_LIMITS, rateLimitHeaders } from "@/lib/rate-limit";
+import { sanitizeSearchInput } from "@/lib/security";
 
 // GET /api/properties - List properties with filters and pagination
 export async function GET(request: NextRequest) {
   try {
+    // Rate limiting for search - 120 requests per minute
+    const clientIP = getClientIP(request);
+    const rateLimitResult = checkRateLimit(`search:${clientIP}`, RATE_LIMITS.search);
+
+    if (!rateLimitResult.success) {
+      return NextResponse.json(
+        { error: "Demasiadas solicitudes. Intenta de nuevo en un momento." },
+        { status: 429, headers: rateLimitHeaders(rateLimitResult) }
+      );
+    }
+
     const supabase = await createClient();
     const { searchParams } = new URL(request.url);
 
@@ -66,7 +78,11 @@ export async function GET(request: NextRequest) {
     if (featured === "true") query = query.eq("featured", true);
     if (ownerId) query = query.eq("ownerId", ownerId);
     if (search) {
-      query = query.or(`title.ilike.%${search}%,description.ilike.%${search}%,colonia.ilike.%${search}%,municipality.ilike.%${search}%,state.ilike.%${search}%`);
+      // Sanitize search input to prevent injection
+      const sanitizedSearch = sanitizeSearchInput(search);
+      if (sanitizedSearch) {
+        query = query.or(`title.ilike.%${sanitizedSearch}%,description.ilike.%${sanitizedSearch}%,colonia.ilike.%${sanitizedSearch}%,municipality.ilike.%${sanitizedSearch}%,state.ilike.%${sanitizedSearch}%`);
+      }
     }
 
     // Apply sorting and pagination
