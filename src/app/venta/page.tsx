@@ -79,9 +79,9 @@ export default function VentaPage() {
               features={[
                 "Gestiona múltiples propiedades",
                 "Panel de control avanzado",
-                "Reportes y estadísticas",
+                "Reportes y estadísticas detalladas",
                 "Equipo de agentes ilimitado",
-                "Integración con tu CRM",
+                "Perfil empresarial verificado",
               ]}
               href="/venta/inmobiliaria"
               sellerType="INMOBILIARIA"

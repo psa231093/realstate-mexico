@@ -3,7 +3,7 @@
 import { usePropertyListing, PropertyPhoto } from "@/contexts/PropertyListingContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Image as ImageIcon, Upload, Star, X } from "lucide-react";
+import { Image as ImageIcon, Upload, Star, X, AlertCircle } from "lucide-react";
 import { useState } from "react";
 
 export function PhotosStep() {
@@ -12,6 +12,10 @@ export function PhotosStep() {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [hasAttemptedNext, setHasAttemptedNext] = useState(false);
+
+  const hasPhotos = data.photos && data.photos.length > 0;
+  const showError = hasAttemptedNext && !hasPhotos;
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -136,13 +140,13 @@ export function PhotosStep() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <ImageIcon className="w-5 h-5 text-blue-600 mt-0.5" />
+      <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/50 rounded-lg border border-blue-200 dark:border-blue-800">
+        <ImageIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
         <div>
-          <h3 className="font-semibold text-blue-900 mb-1">
-            Fotos de la Propiedad
+          <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
+            Fotos de la Propiedad <span className="text-red-500">*</span>
           </h3>
-          <p className="text-sm text-blue-700">
+          <p className="text-sm text-blue-700 dark:text-blue-300">
             Las propiedades con fotos de calidad reciben hasta 5x m&aacute;s consultas
           </p>
         </div>
@@ -155,15 +159,17 @@ export function PhotosStep() {
         onDrop={handleDrop}
         className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
           isDragging
-            ? "border-blue-500 bg-blue-50"
-            : "border-gray-300 bg-gray-50 hover:border-gray-400"
+            ? "border-blue-500 bg-blue-50 dark:bg-blue-950/50"
+            : showError
+            ? "border-red-400 bg-red-50 dark:bg-red-950/30"
+            : "border-border bg-muted hover:border-muted-foreground"
         }`}
       >
-        <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        <Upload className={`w-12 h-12 mx-auto mb-4 ${showError ? "text-red-400" : "text-muted-foreground"}`} />
+        <h3 className="text-lg font-semibold text-foreground mb-2">
           Arrastra fotos aqu&iacute;
         </h3>
-        <p className="text-sm text-gray-600 mb-4">
+        <p className="text-sm text-muted-foreground mb-4">
           o haz clic para seleccionar archivos
         </p>
         <input
@@ -182,32 +188,42 @@ export function PhotosStep() {
             </span>
           </Button>
         </label>
-        <p className="text-xs text-gray-500 mt-3">
+        <p className="text-xs text-muted-foreground mt-3">
           Formatos aceptados: JPG, PNG, WEBP, GIF. M&aacute;ximo 10MB por imagen.
         </p>
 
         {/* Upload Progress */}
         {isUploading && (
           <div className="mt-4">
-            <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+            <div className="w-full bg-muted rounded-full h-2 mb-2">
               <div
-                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                className="bg-primary h-2 rounded-full transition-all duration-300"
                 style={{ width: `${uploadProgress}%` }}
               />
             </div>
-            <p className="text-sm text-blue-600 font-medium">
+            <p className="text-sm text-primary font-medium">
               Subiendo im&aacute;genes... {uploadProgress}%
             </p>
           </div>
         )}
       </div>
 
+      {/* Error Message */}
+      {showError && (
+        <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+          <AlertCircle className="w-5 h-5 text-red-500" />
+          <p className="text-sm text-red-700">
+            Debes subir al menos una foto de la propiedad
+          </p>
+        </div>
+      )}
+
       {/* Photo Guidelines */}
-      <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-        <h4 className="font-semibold text-amber-900 mb-2">
+      <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+        <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-2">
           Consejos para mejores fotos
         </h4>
-        <ul className="text-sm text-amber-800 space-y-1">
+        <ul className="text-sm text-amber-800 dark:text-amber-200 space-y-1">
           <li>&bull; Toma fotos en buena iluminaci&oacute;n natural</li>
           <li>&bull; Incluye todas las habitaciones y &aacute;reas principales</li>
           <li>&bull; Muestra las mejores caracter&iacute;sticas de la propiedad</li>
@@ -219,14 +235,14 @@ export function PhotosStep() {
       {/* Photos Grid */}
       {data.photos && data.photos.length > 0 && (
         <div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+          <h3 className="text-lg font-semibold text-foreground mb-3">
             Fotos Subidas ({data.photos.length})
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {data.photos.map((photo, index) => (
               <div
                 key={index}
-                className="relative group aspect-video bg-gray-100 rounded-lg overflow-hidden border-2 border-gray-200"
+                className="relative group aspect-video bg-muted rounded-lg overflow-hidden border-2 border-border"
               >
                 <img
                   src={photo.url}
@@ -299,4 +315,11 @@ export function PhotosStep() {
       )}
     </div>
   );
+}
+
+// Export validation function for use in wizard
+export function validatePhotosStep(data: {
+  photos?: { url: string; isUploaded: boolean }[];
+}): boolean {
+  return !!(data.photos && data.photos.length > 0);
 }

@@ -17,8 +17,16 @@ export function PreviewStep() {
     try {
       setError(null);
       const { id, slug } = await publishListing();
-      // Redirect to success page
-      router.push(`/venta/particular/success?id=${id}&slug=${slug}`);
+
+      // Redirect to the appropriate success page based on seller type
+      let successPath = "/venta/particular/success";
+      if (data.sellerType === "CORREDOR") {
+        successPath = "/venta/corredor/success";
+      } else if (data.sellerType === "INMOBILIARIA") {
+        successPath = "/venta/inmobiliaria/success";
+      }
+
+      router.push(`${successPath}?id=${id}&slug=${slug}`);
     } catch (err) {
       console.error("Error publishing:", err);
       setError(err instanceof Error ? err.message : "Hubo un error al publicar. Por favor intente nuevamente.");
@@ -53,13 +61,13 @@ export function PreviewStep() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-start gap-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <CheckCircle2 className="w-5 h-5 text-blue-600 mt-0.5" />
+      <div className="flex items-start gap-3 p-4 bg-blue-50 dark:bg-blue-950/50 rounded-lg border border-blue-200 dark:border-blue-800">
+        <CheckCircle2 className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
         <div>
-          <h3 className="font-semibold text-blue-900 mb-1">
+          <h3 className="font-semibold text-blue-900 dark:text-blue-100 mb-1">
             Revisa y Publica
           </h3>
-          <p className="text-sm text-blue-700">
+          <p className="text-sm text-blue-700 dark:text-blue-300">
             Verifica que toda la informaci&oacute;n sea correcta antes de publicar
           </p>
         </div>
@@ -74,14 +82,14 @@ export function PreviewStep() {
 
       {/* Completion Status */}
       {!isFormComplete() && (
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-          <h4 className="font-semibold text-amber-900 mb-2">
+        <div className="bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
+          <h4 className="font-semibold text-amber-900 dark:text-amber-100 mb-2">
             Informaci&oacute;n Incompleta
           </h4>
-          <p className="text-sm text-amber-800 mb-3">
+          <p className="text-sm text-amber-800 dark:text-amber-200 mb-3">
             Por favor completa todos los campos requeridos antes de publicar:
           </p>
-          <ul className="text-sm text-amber-800 space-y-1">
+          <ul className="text-sm text-amber-800 dark:text-amber-200 space-y-1">
             {!data.street && <li>&bull; Direcci&oacute;n completa</li>}
             {!data.type && <li>&bull; Tipo de propiedad</li>}
             {!data.status && <li>&bull; Operaci&oacute;n (Venta/Renta)</li>}
@@ -97,10 +105,10 @@ export function PreviewStep() {
       )}
 
       {/* Property Preview Card */}
-      <div className="border-2 border-gray-200 rounded-lg overflow-hidden bg-white">
+      <div className="border-2 border-border rounded-lg overflow-hidden bg-card">
         {/* Main Photo */}
         {mainPhoto ? (
-          <div className="relative aspect-video bg-gray-200">
+          <div className="relative aspect-video bg-muted">
             <img
               src={mainPhoto.url}
               alt="Vista principal"
@@ -108,21 +116,21 @@ export function PreviewStep() {
             />
           </div>
         ) : (
-          <div className="aspect-video bg-gray-200 flex items-center justify-center">
-            <p className="text-gray-500">Sin fotos</p>
+          <div className="aspect-video bg-muted flex items-center justify-center">
+            <p className="text-muted-foreground">Sin fotos</p>
           </div>
         )}
 
         <div className="p-6">
           {/* Price and Summary */}
           <div className="mb-6">
-            <p className="text-3xl font-bold text-gray-900 mb-2">
+            <p className="text-3xl font-bold text-foreground mb-2">
               {data.price ? formatMXN(data.price) : "Sin precio"}
             </p>
             {data.status === "RENTA" && (
-              <p className="text-sm text-gray-600 mb-2">por mes</p>
+              <p className="text-sm text-muted-foreground mb-2">por mes</p>
             )}
-            <div className="flex items-center gap-4 text-sm text-gray-600">
+            <div className="flex items-center gap-4 text-sm text-muted-foreground">
               {data.bedrooms && (
                 <span>{data.bedrooms} rec</span>
               )}
@@ -137,13 +145,13 @@ export function PreviewStep() {
 
           {/* Address */}
           <div className="mb-6">
-            <p className="text-gray-700 font-medium">
+            <p className="text-foreground font-medium">
               {data.street && data.exteriorNumber
                 ? `${data.street} ${data.exteriorNumber}`
                 : "Sin direcci&oacute;n"}
               {data.interiorNumber && ` Int. ${data.interiorNumber}`}
             </p>
-            <p className="text-gray-600 text-sm">
+            <p className="text-muted-foreground text-sm">
               {data.colonia && `${data.colonia}, `}
               {data.municipality && `${data.municipality}, `}
               {data.state}
@@ -153,28 +161,28 @@ export function PreviewStep() {
           {/* Property Type */}
           {data.type && (
             <div className="mb-6">
-              <span className="inline-block px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm font-medium">
+              <span className="inline-block px-3 py-1 bg-muted text-foreground rounded-full text-sm font-medium">
                 {PROPERTY_TYPE_LABELS[data.type as keyof typeof PROPERTY_TYPE_LABELS]}
               </span>
             </div>
           )}
 
           {/* Property Details Section */}
-          <div className="border-t pt-6">
+          <div className="border-t border-border pt-6">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-start gap-3">
-                <FileText className="w-5 h-5 text-blue-600 mt-0.5" />
+                <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
                 <div>
-                  <h3 className="font-semibold text-gray-900 mb-1">
+                  <h3 className="font-semibold text-foreground mb-1">
                     Detalles de la Propiedad
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-sm text-muted-foreground">
                     Informaci&oacute;n adicional que ayudar&aacute; a los compradores
                   </p>
                 </div>
               </div>
               {data.status && (
-                <span className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-semibold">
+                <span className="bg-primary text-primary-foreground px-3 py-1 rounded-full text-sm font-semibold">
                   {data.status === "VENTA" ? "En Venta" : "En Renta"}
                 </span>
               )}
@@ -182,15 +190,15 @@ export function PreviewStep() {
 
             {/* Description */}
             <div className="mb-6">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
+              <label className="block text-sm font-semibold text-foreground mb-2">
                 Descripci&oacute;n {!data.description && <span className="text-red-500">*</span>}
               </label>
               {data.description ? (
-                <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-700 whitespace-pre-line min-h-[100px]">
+                <div className="px-3 py-2 border border-border rounded-md bg-muted text-sm text-foreground whitespace-pre-line min-h-[100px]">
                   {data.description}
                 </div>
               ) : (
-                <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-400 min-h-[100px]">
+                <div className="px-3 py-2 border border-border rounded-md bg-muted text-sm text-muted-foreground min-h-[100px]">
                   Describa su propiedad...
                 </div>
               )}
@@ -199,26 +207,26 @@ export function PreviewStep() {
             {/* Additional Details */}
             <div className="grid md:grid-cols-3 gap-4 mb-6">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-foreground mb-2">
                   A&ntilde;o de Construcci&oacute;n
                 </label>
-                <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-700">
+                <div className="px-3 py-2 border border-border rounded-md bg-muted text-sm text-foreground">
                   {data.yearBuilt ? data.yearBuilt : "No especificado"}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-foreground mb-2">
                   Estacionamientos
                 </label>
-                <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-700">
+                <div className="px-3 py-2 border border-border rounded-md bg-muted text-sm text-foreground">
                   {data.parkingSpaces !== undefined ? data.parkingSpaces : "No especificado"}
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-semibold text-foreground mb-2">
                   Pisos/Niveles
                 </label>
-                <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50 text-sm text-gray-700">
+                <div className="px-3 py-2 border border-border rounded-md bg-muted text-sm text-foreground">
                   {data.floors ? data.floors : "No especificado"}
                 </div>
               </div>
@@ -226,7 +234,7 @@ export function PreviewStep() {
 
             {/* Amenities */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-3">
+              <label className="block text-sm font-semibold text-foreground mb-3">
                 Amenidades
               </label>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -237,15 +245,15 @@ export function PreviewStep() {
                       key={amenity.id}
                       className={`flex items-center gap-3 p-3 border-2 rounded-lg ${
                         isSelected
-                          ? "border-blue-600 bg-blue-50"
-                          : "border-gray-300 bg-white"
+                          ? "border-blue-600 bg-blue-50 dark:bg-blue-950/50"
+                          : "border-border bg-card"
                       }`}
                     >
                       <div
                         className={`w-4 h-4 rounded border-2 flex items-center justify-center ${
                           isSelected
                             ? "border-blue-600 bg-blue-600"
-                            : "border-gray-300 bg-white"
+                            : "border-border bg-card"
                         }`}
                       >
                         {isSelected && (
@@ -262,7 +270,7 @@ export function PreviewStep() {
                           </svg>
                         )}
                       </div>
-                      <span className="text-sm font-medium text-gray-700">
+                      <span className="text-sm font-medium text-foreground">
                         {amenity.label}
                       </span>
                     </div>
@@ -319,7 +327,7 @@ export function PreviewStep() {
       </div>
 
       {/* Publish Button */}
-      <div className="pt-6 border-t">
+      <div className="pt-6 border-t border-border">
         <Button
           onClick={handlePublish}
           disabled={!isFormComplete() || isPublishing}
@@ -329,7 +337,7 @@ export function PreviewStep() {
           <Rocket className="w-5 h-5" />
           {isPublishing ? "Publicando..." : "Publicar Propiedad"}
         </Button>
-        <p className="text-xs text-gray-500 text-center mt-3">
+        <p className="text-xs text-muted-foreground text-center mt-3">
           Al publicar, aceptas nuestros t&eacute;rminos y condiciones
         </p>
       </div>
